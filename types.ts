@@ -40,7 +40,7 @@ export interface Reward {
 }
 
 export interface Product {
-    id: number;
+    id: string | number;
     name: string;
     price: number;
     imageUrl: string;
