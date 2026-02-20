@@ -1,24 +1,27 @@
-
-export interface PlayerProfile {
-    name: string;
-    level: number;
-    xp: number;
-    avatarUrl: string;
-    customerId: string;
-    phone: string;
-}
+export type ActiveTab = 'home' | 'store' | 'qr' | 'prizes' | 'profile';
 
 export enum AppState {
-    INTRO,
-    AUTH,
-    PROFILING,
-    DASHBOARD,
-    CHECKING_IN,
-    WINNER,
-    STANDARD
+    INTRO = 'intro',
+    AUTH = 'auth',
+    PROFILING = 'profiling',
+    DASHBOARD = 'dashboard',
+    CHECKING_IN = 'checking_in',
+    WINNER = 'winner',
+    STANDARD = 'standard'
 }
 
-export type ActiveTab = 'home' | 'store' | 'qr' | 'prizes' | 'profile';
+export interface PlayerProfile {
+    id?: string;
+    customerId: string;
+    name: string;
+    phone: string;
+    email: string;
+    age?: string;
+    level: number;
+    xp: number; // La app usa 'xp', aunque la BD tenga 'points'
+    avatarUrl: string;
+    authUid?: string;
+}
 
 export interface CheckinResult {
     isWinner: boolean;
@@ -27,21 +30,30 @@ export interface CheckinResult {
     message: string;
 }
 
-export interface Promotion {
-    id: number;
-    imageUrl: string;
-    title: string;
-}
-
-export interface Reward {
-    level: number;
-    name: string;
-    description: string;
-}
-
 export interface Product {
-    id: number;
+    id: string;
     name: string;
     price: number;
+    isActive?: boolean;
+    department?: string;
+    barcode?: string;
+    imageUrl?: string; 
+    nameLowercase?: string;
+}
+
+export interface Promotion {
+    id: string;
+    title: string;
+    description: string;
     imageUrl: string;
+    isActive: boolean;
+    validUntil: any;
+}
+
+export interface LevelConfig {
+    id: string; 
+    name: string;
+    minPoints: number;
+    rewardDescription: string;
+    color: string;
 }
