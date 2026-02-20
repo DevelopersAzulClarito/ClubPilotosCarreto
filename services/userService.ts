@@ -1,5 +1,5 @@
 // services/userService.ts
-import { db, auth } from '../components/firebaseconfig';
+import { db, auth } from '../components/firebaseConfig';
 import { 
     createUserWithEmailAndPassword, 
     signInWithEmailAndPassword, 
