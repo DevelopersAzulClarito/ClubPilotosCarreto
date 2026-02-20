@@ -30,11 +30,30 @@ export interface CheckinResult {
     message: string;
 }
 
-// Interfaces adicionales para tiendas y premios
 export interface Product {
-    id: string | number;
+    id: string;
     name: string;
     price: number;
+    isActive?: boolean;
+    department?: string;
+    barcode?: string;
+    imageUrl?: string; 
+    nameLowercase?: string;
+}
+
+export interface Promotion {
+    id: string;
+    title: string;
+    description: string;
     imageUrl: string;
-    quantity?: number;
+    isActive: boolean;
+    validUntil: any;
+}
+
+export interface LevelConfig {
+    id: string; 
+    name: string;
+    minPoints: number;
+    rewardDescription: string;
+    color: string;
 }
