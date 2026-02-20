@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../firebaseConfig'; 
+import { db } from '../firebaseTemp'; 
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { Product } from '../../types';
 import { PencilIcon } from '../icons/PencilIcon';

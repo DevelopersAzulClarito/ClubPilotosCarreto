@@ -1,5 +1,5 @@
 // services/productService.ts
-import { db } from '../components/firebaseConfig';
+import { db } from '../components/firebaseTemp';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { Product } from '../types';
 

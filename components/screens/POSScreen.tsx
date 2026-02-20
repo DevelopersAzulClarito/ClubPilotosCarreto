@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { db } from '../firebaseConfig';
+import { db } from '../firebaseTemp';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { Product } from '../../types';
 import { TrashIcon } from '../icons/TrashIcon'; 
