@@ -50,10 +50,18 @@ export interface Promotion {
     validUntil: any;
 }
 
+// Interfaz para la configuración de niveles en el Panel Admin
 export interface LevelConfig {
     id: string; 
     name: string;
     minPoints: number;
     rewardDescription: string;
     color: string;
+}
+
+// Interfaz para mostrar los premios en la App del cliente (Dashboard y LevelRewards)
+export interface Reward {
+    level: number;
+    name: string;
+    description: string;
 }
