@@ -7,13 +7,13 @@ import { CarretoLogoIcon } from '../icons/CarretoLogoIcon';
 interface QRScreenProps {
     player: PlayerProfile;
     setActiveTab: (tab: ActiveTab) => void;
-    onCheckin: () => void;
+    // Mantenemos la prop por si el componente padre la envía, aunque ya no se usa aquí en UI
+    onCheckin?: () => void; 
 }
 
-const QRScreen: React.FC<QRScreenProps> = ({ player, setActiveTab, onCheckin }) => {
-    
+const QRScreen: React.FC<QRScreenProps> = ({ player, setActiveTab }) => {
     return (
-        <div className="flex flex-col h-full bg-gray-50">
+        <div className="flex flex-col h-full bg-gray-50 relative">
             {/* --- HEADER --- */}
             <header className="px-6 py-4 flex items-center justify-between bg-white shadow-sm z-10">
                 <div className="w-8"></div> {/* Spacer para centrar */}
@@ -38,11 +38,12 @@ const QRScreen: React.FC<QRScreenProps> = ({ player, setActiveTab, onCheckin }) 
                     </p>
                 </div>
                 
-                {/* --- CONTENEDOR QR --- */}
-                <div className="bg-white p-4 rounded-3xl shadow-xl border border-gray-100 relative transform transition-transform hover:scale-105 duration-300">
+                {/* --- CONTENEDOR QR (Producción) --- */}
+                <div className="bg-white p-4 rounded-3xl shadow-xl relative border border-gray-100">
                     <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-sm z-20">
                         ESCANEAR AQUÍ
                     </div>
+                    
                     <img 
                         src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=CARRETO-${player.phone}`} 
                         alt="QR Code" 
@@ -63,7 +64,7 @@ const QRScreen: React.FC<QRScreenProps> = ({ player, setActiveTab, onCheckin }) 
                 </div>
 
                 {/* --- TARJETA DIGITAL ESTILIZADA --- */}
-                <div className="w-full max-w-xs relative rounded-2xl overflow-hidden shadow-lg transform transition hover:translate-y-1 duration-300">
+                <div className="w-full max-w-xs relative rounded-2xl overflow-hidden shadow-lg mb-6">
                     {/* Fondo con Gradiente */}
                     <div className="absolute inset-0 bg-gradient-to-br from-[#e35212] via-[#ff6b2b] to-[#c13e00]"></div>
                     {/* Decoración de fondo */}
@@ -81,7 +82,7 @@ const QRScreen: React.FC<QRScreenProps> = ({ player, setActiveTab, onCheckin }) 
 
                         <div className="pt-2">
                             <p className="text-[10px] uppercase opacity-75 tracking-widest mb-1">Número de Cliente</p>
-                            {/* Fuente Mono para efecto tarjeta, pero el número va directo (pegado) */}
+                            {/* Fuente Mono para efecto tarjeta */}
                             <p className="font-mono text-xl font-bold tracking-widest drop-shadow-sm">
                                 {player.phone}
                             </p>
@@ -90,14 +91,15 @@ const QRScreen: React.FC<QRScreenProps> = ({ player, setActiveTab, onCheckin }) 
                 </div>
             </div>
 
-            {/* --- BOTÓN DE ACCIÓN --- */}
-            <div className="p-6 bg-white border-t border-gray-100 mt-auto">
-                <button
-                    onClick={onCheckin}
-                    className="w-full bg-gray-900 text-white font-bold py-4 px-6 rounded-xl text-lg hover:bg-black transition-all duration-300 shadow-lg active:scale-[0.98]"
-                >
-                    Simular Check-in
-                </button>
+            {/* --- FOOTER INFORMATIVO (Producción) --- */}
+            <div className="p-6 bg-white border-t border-gray-100 mt-auto relative z-20 text-center">
+                <div className="flex items-center justify-center gap-2 mb-1">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                    <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">Listo para escanear</p>
+                </div>
+                <p className="text-sm font-medium text-gray-500">
+                    El despachador escaneará tu código para sumar puntos o aplicar tus beneficios.
+                </p>
             </div>
         </div>
     );
