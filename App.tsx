@@ -1,27 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { PlayerProfile, AppState, ActiveTab, CheckinResult } from './types';
-import { XP_PER_LEVEL } from './constants'; // Crea este archivo con: export const XP_PER_LEVEL = 1000;
-import { performCheckin } from './services/geminiService';
+import { PlayerProfile, AppState, ActiveTab } from './types';
 import { 
     loginWithIdentifier, 
     registerWithEmail, 
     logoutFirebase, 
-    subscribeToUser, 
-    updateUserStats 
+    subscribeToUser 
 } from './services/userService';
 
-// Componentes Visuales (Asegúrate que existan en sus carpetas)
+// Componentes Visuales
 import Dashboard from './components/Dashboard';
-import CheckinScreen from './components/CheckinScreen';
-import WinnerScreen from './components/WinnerScreen';
-import StandardScreen from './components/StandardScreen';
 import IntroCarousel from './components/IntroCarousel';
 import AuthScreen from './components/AuthScreen';
 import ProfilingScreen from './components/ProfilingScreen';
 import BottomNav from './components/BottomNav';
 import QRScreen from './components/screens/QRScreen';
 import StoreScreen from './components/screens/StoreScreen';
-import PrizesScreen from './components/screens/PrizesScreen';
+import LevelsScreen from './components/screens/LevelsScreen';
 import ProfileScreen from './components/screens/ProfileScreen';
 import { GasPumpIcon } from './components/icons/GasPumpIcon';
 
@@ -29,12 +23,11 @@ const App: React.FC = () => {
     const [player, setPlayer] = useState<PlayerProfile | null>(null);
     const [appState, setAppState] = useState<AppState>(AppState.INTRO);
     const [activeTab, setActiveTab] = useState<ActiveTab>('home');
-    const [checkinResult, setCheckinResult] = useState<CheckinResult | null>(null);
 
-    // --- EFECTO: Sincronización en vivo de puntos ---
+    // --- EFECTO: Sincronización en vivo de puntos y niveles ---
     useEffect(() => {
         if (player?.email) {
-            // Si el usuario existe, nos suscribimos a sus cambios
+            // Nos suscribimos a los cambios del usuario (ej. cuando sube de nivel manualmente o gana puntos)
             const unsub = subscribeToUser(player.email, (updatedUser) => {
                 setPlayer(updatedUser);
             });
@@ -83,38 +76,12 @@ const App: React.FC = () => {
         setActiveTab('home');
     };
 
-    // --- CHECK-IN (JUEGO) ---
-    const handleCheckin = async () => {
-        if (!player) return;
-        setAppState(AppState.CHECKING_IN);
-        
-        // 1. Preguntar a Gemini (o simulación)
-        const result = await performCheckin(player.level);
-        setCheckinResult(result);
-
-        // 2. Calcular matemática local
-        let newXp = player.xp + result.xpGained;
-        let newLevel = player.level;
-        if (newXp >= XP_PER_LEVEL) {
-            newLevel++; 
-            newXp -= XP_PER_LEVEL;
-        }
-
-        // 3. Guardar en BD (El useEffect actualizará la vista)
-        if (player.id) {
-            await updateUserStats(player.id, newXp, newLevel);
-        }
-        
-        // 4. Mostrar Pantalla de Resultado
-        setTimeout(() => {
-            setAppState(result.isWinner ? AppState.WINNER : AppState.STANDARD);
-        }, 2000); 
-    };
-
-    const resetFlow = () => {
-        setCheckinResult(null);
-        setAppState(AppState.DASHBOARD);
-        setActiveTab('home');
+    // --- REFRESCAR JUGADOR MANUALMENTE (Por si falla la suscripción en vivo) ---
+    // Esta función se le pasará a LevelsScreen para forzar la UI a refrescar cuando suba de nivel
+    const handlePlayerUpdate = () => {
+        // Al estar suscritos (useEffect), Firebase debería disparar el setPlayer automáticamente,
+        // pero esta función sirve como hook por si necesitas hacer algo extra al subir de nivel (ej. confeti).
+        console.log("El jugador ha subido de nivel o se actualizó.");
     };
 
     // --- ROUTING VISUAL ---
@@ -123,15 +90,19 @@ const App: React.FC = () => {
             case AppState.INTRO: return <IntroCarousel onComplete={() => setAppState(AppState.AUTH)} />;
             case AppState.AUTH: return <AuthScreen onLogin={handleLogin} onRegister={handleRegister} />;
             case AppState.PROFILING: return <ProfilingScreen onComplete={() => setAppState(AppState.DASHBOARD)} />;
-            case AppState.CHECKING_IN: return <CheckinScreen />;
-            case AppState.WINNER: return checkinResult && <WinnerScreen result={checkinResult} onDone={resetFlow} />;
-            case AppState.STANDARD: return checkinResult && <StandardScreen result={checkinResult} onDone={resetFlow} />;
+            
+            // Eliminados los states de CHECKING_IN, WINNER y STANDARD
+            
             default: return (
                 <div className="flex flex-col flex-grow pb-20">
+                    {/* IMPORTANTE: QRScreen ya no recibe onCheckin */}
                     {activeTab === 'home' && <Dashboard player={player!} setActiveTab={setActiveTab} error={null} />}
                     {activeTab === 'store' && <StoreScreen />}
-                    {activeTab === 'qr' && <QRScreen player={player!} setActiveTab={setActiveTab} onCheckin={handleCheckin} />}
-                    {activeTab === 'prizes' && <PrizesScreen />}
+                    {activeTab === 'qr' && <QRScreen player={player!} setActiveTab={setActiveTab} />}
+                    
+                    {/* Reemplazamos PrizesScreen por LevelsScreen */}
+                    {activeTab === 'levels' && <LevelsScreen player={player!} onPlayerUpdate={handlePlayerUpdate} />}
+                    
                     {activeTab === 'profile' && <ProfileScreen player={player!} onLogout={handleLogout} onAvatarChange={() => {}} />}
                     <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
                 </div>

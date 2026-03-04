@@ -47,10 +47,10 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab }) => {
                 onClick={() => setActiveTab('qr')}
            />
            <NavItem 
-                label="Premios"
+                label="Niveles"
                 icon={<GiftIcon className="w-6 h-6 mb-1"/>}
-                isActive={activeTab === 'prizes'}
-                onClick={() => setActiveTab('prizes')}
+                isActive={activeTab === 'levels'}
+                onClick={() => setActiveTab('levels')}
            />
            <NavItem 
                 label="Perfil"
