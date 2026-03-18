@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { PlayerProfile, Reward, ActiveTab } from '../../types';
 import { db } from '../firebaseTemp';
 import { collection, getDocs, query, orderBy, doc, updateDoc } from 'firebase/firestore';
-import { getRequiredXpForLevel } from '../../constants'; // Importamos la nueva función
+import { getRequiredXpForLevel } from '../../constants'; // Usamos la nueva función de Puntos
 import XPBar from '../XPBar';
+import WinnerScreen from '../WinnerScreen'; // Importamos la animación de celebración
 
 // --- Iconos Inline para asegurar compatibilidad ---
 const CheckIcon = ({ className }: { className?: string }) => (
@@ -37,6 +38,10 @@ const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) =
     const [levels, setLevels] = useState<Reward[]>([]);
     const [loading, setLoading] = useState(true);
     const [isLevelingUp, setIsLevelingUp] = useState(false);
+    
+    // Estados para controlar cuándo mostrar la animación y con qué nivel
+    const [showCelebration, setShowCelebration] = useState(false);
+    const [celebrationLevel, setCelebrationLevel] = useState<number | null>(null);
 
     useEffect(() => {
         const fetchLevels = async () => {
@@ -68,29 +73,35 @@ const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) =
         );
     }
 
-    // --- LÓGICA DE NIVELES INFINITOS ---
-    // Calculamos el XP requerido para el nivel actual usando la constante dinámica
-    const requiredXp = getRequiredXpForLevel(player.level);
-    
-    // Puede subir de nivel SIEMPRE que tenga los puntos (ya no lo limitamos por si existen premios en la BD)
-    const canLevelUp = player.xp >= requiredXp;
+    // --- LÓGICA DE NIVELES INFINITOS (EN PUNTOS) ---
+    const requiredPoints = getRequiredXpForLevel(player.level);
+    const canLevelUp = player.xp >= requiredPoints;
 
     const handleLevelUp = async () => {
         if (!canLevelUp) return;
         
         setIsLevelingUp(true);
         try {
-            // NOTA: Asegúrate de que la colección sea 'users' o 'players' según tu BD
-            // Usamos player.id asumiendo que es el ID del documento en Firestore
-            const userRef = doc(db, 'users', player.id || player.customerId); 
+            const userRef = doc(db, 'customers', player.id || player.customerId); 
+            const newLevel = player.level + 1;
             
             await updateDoc(userRef, {
-                level: player.level + 1,
-                // Restamos los puntos que costó subir de nivel dinámicamente
-                xp: player.xp - requiredXp 
+                level: newLevel,
+                // Actualizamos ambos campos para mantener compatibilidad en BD
+                xp: player.xp - requiredPoints,
+                points: player.xp - requiredPoints 
             });
 
-            // Llamamos a la función del padre para que actualice el estado local de React
+            // Guardamos el nivel alcanzado y mostramos la animación
+            setCelebrationLevel(newLevel);
+            setShowCelebration(true);
+            
+            // Ocultar la animación automáticamente después de 5 segundos si no la tocan
+            setTimeout(() => {
+                setShowCelebration(false);
+            }, 5000);
+
+            // Actualizar datos locales
             if (onPlayerUpdate) onPlayerUpdate();
             
         } catch (error) {
@@ -102,8 +113,17 @@ const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) =
     };
 
     return (
-        <div className="flex flex-col h-full bg-[#FAFAFA] pb-24 overflow-y-auto">
+        <div className="flex flex-col h-full bg-[#FAFAFA] pb-24 overflow-y-auto relative">
             
+            {/* Componente de celebración superpuesto pasándole las variables clave */}
+            {showCelebration && celebrationLevel !== null && (
+                <WinnerScreen 
+                    level={celebrationLevel} 
+                    onClose={() => setShowCelebration(false)} 
+                />
+            )}
+            
+
             {/* --- HEADER --- */}
             <header className="px-6 py-5 bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-20">
                 <h2 className="text-xl font-black text-gray-900 tracking-tight text-center">Niveles y Beneficios</h2>
@@ -126,11 +146,11 @@ const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) =
                         <div className="w-full bg-black/20 p-4 rounded-2xl border border-white/10 mb-4">
                             <div className="flex justify-between items-end mb-2 text-sm font-bold">
                                 <span>Puntos de Nivel</span>
-                                <span className="text-emerald-300">{player.xp.toLocaleString()} / {requiredXp.toLocaleString()} XP</span>
+                                <span className="text-emerald-300">{player.xp.toLocaleString()} / {requiredPoints.toLocaleString()} Pts</span>
                             </div>
                             <div className="opacity-90">
-                                {/* Pasamos la meta calculada dinámicamente a la barra */}
-                                <XPBar currentXp={player.xp} maxXp={requiredXp} />
+                                {/* Barra actualizada a nueva prop si ya las usa, o asumiendo currentXp/maxXp */}
+                                <XPBar currentXp={player.xp} maxXp={requiredPoints} />
                             </div>
                         </div>
 
@@ -152,7 +172,7 @@ const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) =
                                     ¡Subir a Nivel {player.level + 1}!
                                 </>
                             ) : (
-                                `Faltan ${(requiredXp - player.xp).toLocaleString()} XP`
+                                `Faltan ${(requiredPoints - player.xp).toLocaleString()} Puntos`
                             )}
                         </button>
                     </div>
@@ -182,7 +202,6 @@ const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) =
                             {levels.map((lvl) => {
                                 const isUnlocked = player.level >= lvl.level;
                                 const isNext = player.level + 1 === lvl.level;
-                                const isLocked = player.level + 1 < lvl.level;
 
                                 return (
                                     <div 
@@ -204,8 +223,9 @@ const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) =
                                         )}
 
                                         {/* Icono de Estado / Avatar del Nivel */}
-                                        <div className="relative">
-                                            <div className={`flex-shrink-0 w-16 h-16 rounded-[1.25rem] flex items-center justify-center mr-5 shadow-sm border-2 z-10 relative ${
+                                        {/* El mr-5 y flex-shrink se asignan al contenedor para que el centrado sea perfecto */}
+                                        <div className="relative mr-5 flex-shrink-0">
+                                            <div className={`w-16 h-16 rounded-[1.25rem] flex items-center justify-center shadow-sm border-2 z-10 relative ${
                                                 isUnlocked 
                                                     ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 border-emerald-200 text-white' 
                                                     : isNext
@@ -221,9 +241,9 @@ const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) =
                                                 )}
                                             </div>
                                             
-                                            {/* Etiqueta flotante del número de nivel */}
+                                            {/* Etiqueta flotante del número de nivel rediseñada */}
                                             {isUnlocked && (
-                                                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-emerald-100 text-emerald-800 text-[9px] font-black uppercase px-2 py-0.5 rounded-full border border-white shadow-sm z-20">
+                                                <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full border-2 border-white shadow-sm z-20">
                                                     LVL {lvl.level}
                                                 </div>
                                             )}
@@ -240,7 +260,7 @@ const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) =
                                                 
                                                 {/* Badge para el próximo nivel */}
                                                 {isNext && (
-                                                    <span className="shrink-0 bg-orange-100 text-orange-700 text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-md border border-orange-200">
+                                                    <span className="shrink-0 whitespace-nowrap bg-orange-100 text-orange-700 text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-md border border-orange-200">
                                                         Próximo
                                                     </span>
                                                 )}

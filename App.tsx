@@ -36,36 +36,26 @@ const App: React.FC = () => {
         }
     }, [player?.email]);
 
+    // --- EFECTO: Resetear el scroll al cambiar de pestaña ---
+    useEffect(() => {
+        // Obliga a la ventana a volver arriba cada vez que cambia la pestaña o el estado de la app
+        window.scrollTo(0, 0);
+    }, [activeTab, appState]);
+
     // --- LOGIN ---
+    // ⚠️ ATENCIÓN: Quitamos el try/catch. Ahora AuthScreen.tsx atrapa el error y muestra el banner rojo.
     const handleLogin = async (identifier: string, pass: string) => {
-        try {
-            const user = await loginWithIdentifier(identifier, pass);
-            setPlayer(user);
-            setAppState(AppState.DASHBOARD);
-        } catch (e: any) {
-            console.error(e);
-            let msg = e.message;
-            if (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password') {
-                msg = "Credenciales incorrectas.";
-            }
-            alert("Error: " + msg);
-        }
+        const user = await loginWithIdentifier(identifier, pass);
+        setPlayer(user);
+        setAppState(AppState.DASHBOARD);
     };
 
     // --- REGISTRO ---
+    // ⚠️ ATENCIÓN: Quitamos el try/catch. Ahora AuthScreen.tsx atrapa el error y muestra el banner rojo.
     const handleRegister = async (info: any) => {
-        try {
-            const user = await registerWithEmail(info);
-            setPlayer(user);
-            setAppState(AppState.PROFILING);
-        } catch (e: any) {
-            console.error(e);
-            if (e.code === 'auth/email-already-in-use') {
-                alert("El correo ya está registrado.");
-            } else {
-                alert("Error: " + e.message);
-            }
-        }
+        const user = await registerWithEmail(info);
+        setPlayer(user);
+        setAppState(AppState.PROFILING);
     };
 
     // --- LOGOUT ---
@@ -114,11 +104,11 @@ const App: React.FC = () => {
         <div className="min-h-screen bg-white flex justify-center">
             <div className="w-full max-w-sm bg-white min-h-screen shadow-2xl relative flex flex-col">
                  {appState === AppState.DASHBOARD && activeTab !== 'qr' && (
-                    <header className="px-6 py-4 flex items-center gap-3 border-b border-gray-100 bg-white sticky top-0 z-10">
-                        <GasPumpIcon className="w-8 h-8 text-[#e35212]" />
-                        <div>
-                            <h1 className="font-bold text-gray-900 text-lg leading-tight">Club Pilotos</h1>
-                            <p className="text-xs text-gray-500">Carreto Gas</p>
+                    <header className="px-6 py-4 flex items-center gap-3 border-b border-gray-100 bg-white sticky top-0 z-50 flex-shrink-0 w-full">
+                        <GasPumpIcon className="w-8 h-8 text-[#e35212] flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                            <h1 className="font-bold text-gray-900 text-lg leading-tight truncate">Club Pilotos</h1>
+                            <p className="text-xs text-gray-500 truncate">Carreto Gas</p>
                         </div>
                     </header>
                  )}

@@ -1,4 +1,3 @@
-// services/userService.ts
 import { db, auth } from '../components/firebaseTemp';
 import { 
     createUserWithEmailAndPassword, 
@@ -62,8 +61,9 @@ export const loginWithIdentifier = async (identifier: string, password: string):
             name: data.name,
             phone: data.phone,
             email: data.email,
-            xp: data.points || 0, // Mapeo crucial: BD(points) -> App(xp)
-            level: data.level || 1,
+            // Usamos ?? en lugar de || para que respete el 0
+            xp: data.points ?? 0, 
+            level: data.level ?? 0, 
             avatarUrl: data.avatarUrl || `https://i.pravatar.cc/150?u=${data.phone}`,
         } as PlayerProfile;
     } else {
@@ -94,15 +94,16 @@ export const registerWithEmail = async (userData: { email: string; password: str
             authUid: uid,
             name: userData.name, 
             age: userData.age
-            // NO tocamos 'points', así conserva sus 1352 puntos
+            // NO tocamos 'points' ni 'level', así conserva su progreso
         });
 
         const data = existingDoc.data();
         return {
             ...data,
             id: existingDoc.id,
-            xp: data.points || 0,
-            level: data.level || 1,
+            // Usamos ?? en lugar de || para que respete el 0
+            xp: data.points ?? 0,
+            level: data.level ?? 0,
             avatarUrl: data.avatarUrl || `https://i.pravatar.cc/150?u=${cleanPhone}`
         } as PlayerProfile;
 
@@ -115,7 +116,7 @@ export const registerWithEmail = async (userData: { email: string; password: str
             email: userData.email,
             age: userData.age,
             points: 0,
-            level: 1,
+            level: 0, // <-- AHORA LOS NUEVOS USUARIOS EMPIEZAN EN NIVEL 0
             authUid: uid,
             createdAt: new Date().toISOString()
         });
@@ -127,7 +128,7 @@ export const registerWithEmail = async (userData: { email: string; password: str
             phone: cleanPhone,
             email: userData.email,
             xp: 0,
-            level: 1,
+            level: 0, // <-- AHORA LOS NUEVOS USUARIOS EMPIEZAN EN NIVEL 0
             avatarUrl: `https://i.pravatar.cc/150?u=${cleanPhone}`
         } as PlayerProfile;
     }
@@ -150,8 +151,9 @@ export const subscribeToUser = (email: string, callback: (user: PlayerProfile) =
                         name: data.name,
                         phone: data.phone,
                         email: data.email,
-                        xp: data.points || 0,
-                        level: data.level || 1,
+                        // Usamos ?? en lugar de || para que respete el 0
+                        xp: data.points ?? 0,
+                        level: data.level ?? 0,
                         avatarUrl: data.avatarUrl || `https://i.pravatar.cc/150?u=${data.phone}`
                     } as PlayerProfile);
                 }
