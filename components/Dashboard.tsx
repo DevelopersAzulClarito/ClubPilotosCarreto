@@ -3,14 +3,16 @@ import { PlayerProfile, Promotion, Reward, ActiveTab } from '../types';
 import PromotionsCarousel from './PromotionsCarousel';
 import LevelRewards from './LevelRewards';
 import XPBar from './XPBar';
-import { XP_PER_LEVEL } from '../constants';
+
+// IMPORTANTE: Usamos la nueva función que soporta niveles infinitos y empezar en Nivel 0
+import { getRequiredXpForLevel } from '../constants'; 
 
 // Importamos las frases motivacionales
-import { motivationalPhrases } from './FrasesM'; // Ajustado según tu última ruta
+import { motivationalPhrases } from './FrasesM'; 
 
 // Importaciones de Firebase para traer los datos reales
-import { db } from '../components/firebaseTemp'; // Ajusta esta ruta según tu estructura
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { db } from '../components/firebaseTemp'; 
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 
 interface DashboardProps {
     player: PlayerProfile;
@@ -19,11 +21,9 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) => {
-    // Estado para las promociones
     const [promotions, setPromotions] = useState<Promotion[]>([]);
     const [loadingPromos, setLoadingPromos] = useState(true);
 
-    // Estado para los premios por nivel
     const [rewards, setRewards] = useState<Reward[]>([]);
     const [loadingRewards, setLoadingRewards] = useState(true);
 
@@ -32,13 +32,16 @@ const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) =>
         return motivationalPhrases[randomIndex];
     }, []);
 
-    // Efecto para cargar los datos desde Firebase al abrir la app
     useEffect(() => {
         const fetchPromotions = async () => {
             try {
-                // Solo traemos las promociones que el Admin tenga marcadas como activas
-                const q = query(collection(db, "promotions"), where("activo", "==", true));
+                // Ahora traemos todas las promociones (sin filtro manual de "activo")
+                const q = query(collection(db, "promotions"));
                 const snapshot = await getDocs(q);
+                
+                // Obtenemos la fecha actual en formato local YYYY-MM-DD
+                const today = new Date();
+                const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
                 
                 const promosData = snapshot.docs.map(doc => {
                     const data = doc.data();
@@ -47,9 +50,16 @@ const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) =>
                         title: data.titulo || '', 
                         description: data.descripcion || '', 
                         imageUrl: data.imageUrl || 'https://images.unsplash.com/photo-1617523232112-398b67b1efb2?q=80&w=400&auto=format&fit=crop',
-                        isActive: data.activo || false,
+                        // La propiedad isActive ya no es relevante manualmente, dependerá de validUntil
+                        isActive: true, 
                         validUntil: data.fechaFin || null
                     } as Promotion; 
+                }).filter(promo => {
+                    // EXPIRACIÓN AUTOMÁTICA: 
+                    // Si no tiene fecha límite configurada, se muestra siempre
+                    if (!promo.validUntil) return true;
+                    // Si tiene fecha límite, verificamos que no haya expirado hoy
+                    return promo.validUntil >= todayStr;
                 });
                 
                 setPromotions(promosData);
@@ -62,7 +72,6 @@ const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) =>
 
         const fetchRewards = async () => {
             try {
-                // Traemos los niveles ordenados de menor a mayor
                 const q = query(collection(db, "levels"), orderBy("level", "asc"));
                 const snapshot = await getDocs(q);
                 
@@ -87,22 +96,19 @@ const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) =>
         fetchRewards();
     }, []);
 
-    // --- LÓGICA DE DIFICULTAD PROGRESIVA ---
-    // Multiplicamos la base por el nivel actual para que cada nivel cueste más
-    const requiredXp = XP_PER_LEVEL * player.level;
+    // --- LÓGICA DE PROGRESO DE NIVEL ACTUALIZADA ---
+    const requiredXp = getRequiredXpForLevel(player.level);
     const hasEnoughXP = player.xp >= requiredXp;
     const missingXp = Math.max(0, requiredXp - player.xp);
 
     return (
-        // CONTENEDOR MAESTRO: overflow-x-hidden evita que la pantalla se desborde horizontalmente
-        <div className="w-full max-w-md mx-auto pb-24 overflow-x-hidden bg-[#FAFAFA] min-h-screen">
+        <div className="w-full max-w-md mx-auto pb-24 overflow-x-hidden bg-[#F4F5F7] min-h-screen">
             
-            {/* Sección Superior: Puntos y Progreso */}
+            {/* --- SECCIÓN SUPERIOR: PROGRESO --- */}
             <div className="px-5 sm:px-6 pt-6 space-y-7">
                 
                 {/* Tarjeta Premium de Nivel y Puntos */}
-                <div className="bg-white border border-gray-100/80 rounded-[2rem] p-7 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden z-0">
-                    {/* Destellos decorativos de fondo */}
+                <div className="bg-white border border-gray-100 rounded-[2rem] p-7 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden z-0">
                     <div className="absolute top-0 right-0 -mr-6 -mt-6 w-32 h-32 bg-emerald-50 rounded-full opacity-80 blur-2xl -z-10"></div>
                     <div className="absolute bottom-0 left-0 -ml-6 -mb-6 w-24 h-24 bg-orange-50 rounded-full opacity-60 blur-xl -z-10"></div>
                     
@@ -117,16 +123,20 @@ const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) =>
                     </p>
                 </div>
                 
-                {/* Barra de Progreso con Límite Dinámico */}
+                {/* Barra de Progreso */}
                 <div className="w-full space-y-3 px-1">
-                    {/* Le pasamos la meta calculada: requiredXp */}
+                    <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 px-1">
+                        <span>Progreso Actual</span>
+                        <span>Meta: {requiredXp.toLocaleString()} XP</span>
+                    </div>
+                    
                     <XPBar currentXp={player.xp} maxXp={requiredXp} />
                     
-                    <p className="text-sm text-gray-500 text-center font-medium">
+                    <p className="text-sm text-gray-500 text-center font-medium mt-2">
                         {hasEnoughXP ? (
                             <span className="text-emerald-600 font-bold">¡Tienes puntos para subir al Nivel {player.level + 1}!</span>
                         ) : (
-                            <>Faltan <span className="font-bold text-gray-800">{missingXp.toLocaleString()}</span> puntos para el Nivel {player.level + 1}</>
+                            <>Faltan <span className="font-bold text-gray-900">{missingXp.toLocaleString()}</span> puntos para subir</>
                         )}
                     </p>
                 </div>
@@ -134,10 +144,10 @@ const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) =>
                 {/* Botón de Acción Principal */}
                 <div className="pt-2">
                     <button
-                        onClick={() => setActiveTab(hasEnoughXP ? 'levels' : 'qr')} // Si tiene puntos lo manda a niveles, si no, a su QR
-                        className={`w-full flex items-center justify-center gap-3 text-white font-black py-4 px-6 rounded-2xl text-lg transition-transform duration-200 active:scale-[0.97] shadow-xl ${
+                        onClick={() => setActiveTab(hasEnoughXP ? 'levels' : 'qr')} 
+                        className={`w-full flex items-center justify-center gap-3 text-white font-black py-4 px-6 rounded-[1.5rem] text-lg transition-transform duration-200 active:scale-[0.97] shadow-xl ${
                             hasEnoughXP 
-                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-500/30 animate-pulse' 
+                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-500/30 animate-pulse border border-emerald-400/50' 
                             : 'bg-gradient-to-r from-[#e35212] to-[#ff7438] shadow-orange-500/25 border border-orange-400/50'
                         }`}
                     >
@@ -153,7 +163,7 @@ const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) =>
                                 <svg className="w-6 h-6 stroke-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                                 </svg>
-                                Mi pase digital
+                                Mi Pase Digital
                             </>
                         )}
                     </button>
@@ -161,14 +171,14 @@ const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) =>
                 </div>
 
                 {/* Frase Motivacional */}
-                <p className="text-center text-sm text-gray-400 font-medium italic">
+                <p className="text-center text-sm text-gray-500 font-medium italic px-4">
                     "{randomPhrase}"
                 </p>
             </div>
 
-            {/* Sección de Promociones */}
-            <div className="pt-8">
-                <h3 className="text-xl font-extrabold text-gray-900 tracking-tight mb-5 px-5 sm:px-6">Promociones</h3>
+            {/* --- SECCIÓN DE PROMOCIONES --- */}
+            <div className="pt-10">
+                <h3 className="text-xl font-extrabold text-gray-900 tracking-tight mb-5 px-5 sm:px-6">Para Ti</h3>
                 
                 {loadingPromos ? (
                     <div className="h-48 flex items-center justify-center bg-white rounded-2xl mx-5 sm:mx-6 border border-gray-100 shadow-sm">
@@ -179,21 +189,21 @@ const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) =>
                         <PromotionsCarousel promotions={promotions} />
                     </div>
                 ) : (
-                    <div className="mx-5 sm:mx-6 bg-white border border-gray-100 rounded-2xl p-8 text-center shadow-sm">
+                    <div className="mx-5 sm:mx-6 bg-white border border-gray-100 rounded-2xl p-8 text-center shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
                         <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3 text-gray-400">
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                             </svg>
                         </div>
-                        <p className="text-gray-500 text-sm font-medium leading-relaxed">No hay promociones activas por ahora. ¡Mantente atento a las novedades!</p>
+                        <p className="text-gray-500 text-sm font-medium leading-relaxed">No hay promociones activas por ahora. ¡Mantente atento!</p>
                     </div>
                 )}
             </div>
 
-            {/* Sección de Premios por Nivel */}
+            {/* --- SECCIÓN DE PREMIOS POR NIVEL --- */}
             <div className="pt-10 px-5 sm:px-6">
                  <h3 className="text-xl font-extrabold text-gray-900 tracking-tight mb-4">Premios por Nivel</h3>
-                 <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] min-h-[150px] relative">
+                 <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.02)] min-h-[150px] relative">
                     {loadingRewards ? (
                         <div className="absolute inset-0 flex items-center justify-center">
                             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#136A40]"></div>

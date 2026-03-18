@@ -1,20 +1,8 @@
-import { GoogleGenerativeAI, SchemaType } from "@google/genai"; // OJO: Checa tu versión instalada
-// Si usas la versión estándar: import { GoogleGenerativeAI } from "@google/generative-ai";
-// Ajuste para @google/generative-ai (más común en web):
+// ✅ CORRECTO - services/geminiService.ts
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { CheckinResult } from '../types';
 
-const schema = {
-  description: "Resultado check-in",
-  type: "OBJECT", // Ajuste simple para compatibilidad
-  properties: {
-    isWinner: { type: "BOOLEAN" },
-    prize: { type: "STRING", nullable: true },
-    xpGained: { type: "INTEGER" },
-    message: { type: "STRING" },
-  },
-  required: ["isWinner", "xpGained", "message"],
-};
+// Schema removed - Gemini 1.5 Flash maneja JSON automáticamente
 
 export const performCheckin = async (playerLevel: number): Promise<CheckinResult> => {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
