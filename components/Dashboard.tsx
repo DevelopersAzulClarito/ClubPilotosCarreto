@@ -185,8 +185,11 @@ const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) =>
                         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#e35212]"></div>
                     </div>
                 ) : promotions.length > 0 ? (
-                    <div className="w-full">
-                        <PromotionsCarousel promotions={promotions} />
+                    // AQUÍ ESTÁ EL CAMBIO PRINCIPAL PARA CENTRAR
+                    <div className={`w-full ${promotions.length === 1 ? 'flex justify-center px-5 sm:px-6' : ''}`}>
+                        <div className={`${promotions.length === 1 ? 'w-full max-w-[320px]' : 'w-full'}`}>
+                            <PromotionsCarousel promotions={promotions} />
+                        </div>
                     </div>
                 ) : (
                     <div className="mx-5 sm:mx-6 bg-white border border-gray-100 rounded-2xl p-8 text-center shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
