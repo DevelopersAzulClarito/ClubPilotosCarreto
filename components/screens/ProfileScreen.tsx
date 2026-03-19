@@ -132,18 +132,18 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ player, onLogout, onAvata
             {toast && (
                 <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-fade-in-up w-[90%] max-w-sm">
                     <div className={`px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 backdrop-blur-md border ${toast.type === 'success'
-                            ? 'bg-emerald-500/90 text-white border-emerald-400'
-                            : 'bg-red-500/90 text-white border-red-400'
+                        ? 'bg-emerald-500/90 text-white border-emerald-400'
+                        : 'bg-red-500/90 text-white border-red-400'
                         }`}>
                         {toast.type === 'success' ? <CheckIcon className="w-5 h-5 shrink-0" /> : <XMarkIcon className="w-5 h-5 shrink-0" />}
                         <p className="text-sm font-bold leading-tight">{toast.message}</p>
                     </div>
                 </div>
             )}
-            {/* --- MODAL PARA EDITAR NOMBRE (BOTTOM SHEET EN MÓVIL) --- */}
+            {/* --- MODAL PARA EDITAR NOMBRE (ELEVADO EN MÓVIL PARA EVITAR TECLADO) --- */}
             {isEditingName && (
-                <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 touch-none">
-                    <div className="bg-white w-full max-w-md rounded-t-[2rem] sm:rounded-[2rem] p-6 pb-10 sm:pb-6 shadow-2xl anim-bottom-sheet">
+                <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-start pt-[15vh] sm:pt-0 sm:items-center justify-center p-4 touch-none">
+                    <div className="bg-white w-full max-w-md rounded-[2rem] p-6 shadow-2xl anim-bottom-sheet">
 
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-xl font-black text-gray-900">Editar Nombre</h3>
