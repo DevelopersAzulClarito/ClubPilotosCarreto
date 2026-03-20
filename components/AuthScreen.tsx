@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { UserIcon } from './icons/UserIcon'; 
+import TermsModal from './TermsModal';
+import PrivacyModal from './PrivacyModal';
+import { resetPasswordWithIdentifier } from '../services/userService';
 
 interface AuthScreenProps {
     onLogin: (identifier: string, pass: string) => Promise<void> | void;
@@ -22,9 +25,15 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onRegister }) => {
     // Estado de Carga
     const [isLoading, setIsLoading] = useState(false);
 
-    // --- ESTADOS PARA LAS VENTANAS EMERGENTES (MODALES) ---
+    // --- ESTADOS PARA LAS VENTANAS EMERGENTES (MODALES LEGALES) ---
     const [showTerms, setShowTerms] = useState(false);
     const [showPrivacy, setShowPrivacy] = useState(false);
+
+    // --- ESTADOS PARA RECUPERAR CONTRASEÑA ---
+    const [showResetModal, setShowResetModal] = useState(false);
+    const [resetInput, setResetInput] = useState('');
+    const [isResetting, setIsResetting] = useState(false);
+    const [resetMessage, setResetMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null);
 
     // Login State
     const [identifier, setIdentifier] = useState('');
@@ -45,6 +54,30 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onRegister }) => {
     const handleTabChange = (loginState: boolean) => {
         setIsLogin(loginState);
         setErrorMsg(null); 
+    };
+
+    // --- VALIDACIONES DE RECUPERAR CONTRASEÑA ---
+    const handlePasswordReset = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setResetMessage(null);
+        
+        if (!resetInput.trim()) {
+            return setResetMessage({ text: "Ingresa tu correo o número de celular.", type: 'error' });
+        }
+        
+        setIsResetting(true);
+        try {
+            await resetPasswordWithIdentifier(resetInput);
+            setResetMessage({ text: "¡Enlace enviado! Revisa tu bandeja de entrada o carpeta de spam.", type: 'success' });
+            setResetInput(''); // Limpiamos el input tras el éxito
+        } catch (error: any) {
+            let msg = error.message || "Error al enviar el correo.";
+            if (msg.includes('invalid-email')) msg = "El formato del correo es inválido.";
+            else if (msg.includes('user-not-found')) msg = "No hay ninguna cuenta con estos datos.";
+            setResetMessage({ text: msg, type: 'error' });
+        } finally {
+            setIsResetting(false);
+        }
     };
 
     // --- VALIDACIONES DE REGISTRO ---
@@ -209,7 +242,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onRegister }) => {
                         </InputIconWrapper>
 
                         <div className="flex justify-end">
-                            <button type="button" className="text-xs font-semibold text-[#e35212] hover:underline">
+                            <button 
+                                type="button" 
+                                onClick={() => setShowResetModal(true)}
+                                className="text-xs font-semibold text-[#e35212] hover:underline"
+                            >
                                 ¿Olvidaste tu contraseña?
                             </button>
                         </div>
@@ -274,7 +311,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onRegister }) => {
                 )}
             </div>
 
-            {/* --- ENLACES MODIFICADOS A BOTONES EMERGENTES --- */}
             <p className="text-center text-xs text-gray-400 mt-8">
                 Al continuar, aceptas los{' '}
                 <button 
@@ -295,178 +331,74 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onRegister }) => {
                 {' '}de Club Pilotos Carreto.
             </p>
 
-            {/* ============================================================== */}
-            {/* VENTANA EMERGENTE (MODAL) DE TÉRMINOS Y CONDICIONES (PRODUCCIÓN) */}
-            {/* ============================================================== */}
-            {showTerms && (
-                <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in touch-none">
-                    <div className="bg-white rounded-3xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
-                        
-                        <div className="flex justify-between items-center p-5 sm:p-6 border-b border-gray-100 bg-gray-50 shrink-0">
-                            <h3 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight">Términos y Condiciones</h3>
-                            <button 
-                                onClick={() => setShowTerms(false)}
-                                className="p-2 text-gray-400 bg-white border border-gray-200 rounded-full hover:bg-gray-100 active:scale-90 transition-all shadow-sm"
-                            >
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-                        
-                        <div className="overflow-y-auto p-5 sm:p-6 space-y-5 text-sm text-gray-600 pb-8 overscroll-contain">
-                            <p className="font-bold text-gray-400 uppercase tracking-widest text-[10px]">Última actualización: Marzo 2026</p>
-                            
-                            <p className="leading-relaxed">
-                                Bienvenido a <strong>Club Pilotos Carreto</strong> (en adelante, el "Programa" o la "Aplicación"), operado por Carreto Gas (en adelante, "El Operador"). Al descargar, registrarse o acceder a la Aplicación, usted (el "Usuario") acepta estar sujeto íntegramente a los siguientes Términos y Condiciones.
-                            </p>
-
-                            <div className="space-y-2">
-                                <h4 className="font-black text-gray-900 text-sm">1. Naturaleza del Programa</h4>
-                                <p className="leading-relaxed">Club Pilotos Carreto es un programa de lealtad digital y gratuito diseñado para recompensar la preferencia de nuestros clientes. A través de la Aplicación, el Usuario acumula "Puntos" por sus consumos en estaciones participantes, los cuales determinan su "Nivel" y pueden ser canjeados por beneficios específicos.</p>
-                            </div>
-
-                            <div className="space-y-2">
-                                <h4 className="font-black text-gray-900 text-sm">2. Requisitos de Elegibilidad y Cuentas</h4>
-                                <ul className="list-disc pl-5 space-y-1.5 marker:text-[#e35212] leading-relaxed">
-                                    <li>El Usuario declara tener al menos 18 años de edad y capacidad legal para obligarse bajo estos Términos.</li>
-                                    <li>La cuenta es estrictamente <strong>personal e intransferible</strong>. Queda prohibida la venta, traspaso, cesión o consolidación de cuentas entre distintos Usuarios.</li>
-                                    <li>El Usuario es responsable de mantener la confidencialidad de sus credenciales. El Operador no se hace responsable por canjes no autorizados derivados del descuido de la cuenta.</li>
-                                </ul>
-                            </div>
-
-                            <div className="space-y-2">
-                                <h4 className="font-black text-gray-900 text-sm">3. Reglas de Acumulación y Valor de los Puntos</h4>
-                                <ul className="list-disc pl-5 space-y-1.5 marker:text-[#e35212] leading-relaxed">
-                                    <li>Para acumular Puntos, el Usuario <strong>debe</strong> presentar su Pase Digital (Código QR) al despachador <strong>antes o durante</strong> el proceso de carga. Por políticas del sistema, <strong>no se realizarán abonos de puntos retroactivos</strong> una vez finalizada y facturada la venta.</li>
-                                    <li><strong>Los Puntos no son moneda de curso legal</strong>, no constituyen derechos de propiedad, no generan intereses y <strong>no pueden ser canjeados por dinero en efectivo</strong> ni ser utilizados para pago de deudas.</li>
-                                </ul>
-                            </div>
-
-                            <div className="space-y-2">
-                                <h4 className="font-black text-gray-900 text-sm">4. Canje y Disponibilidad de Recompensas</h4>
-                                <p className="leading-relaxed">Todas las recompensas mostradas en el catálogo o en los beneficios por Nivel están sujetas a <strong>disponibilidad de inventario</strong> en la estación física al momento de solicitar el canje. El Operador se reserva el derecho de sustituir recompensas por otras de valor similar o modificar el costo en Puntos en cualquier momento sin previo aviso.</p>
-                            </div>
-
-                            <div className="space-y-2">
-                                <h4 className="font-black text-gray-900 text-sm">5. Vigencia y Cancelación de Puntos</h4>
-                                <p className="leading-relaxed">Los Puntos acumulados tendrán una vigencia de <strong>12 (doce) meses</strong> contados a partir de su fecha de emisión. Adicionalmente, si la cuenta permanece inactiva (sin acumular ni redimir) por un periodo de 6 meses consecutivos, El Operador podrá cancelar la totalidad de los Puntos de dicha cuenta.</p>
-                            </div>
-
-                            <div className="space-y-2">
-                                <h4 className="font-black text-gray-900 text-sm">6. Suspensión de Cuentas y Fraude</h4>
-                                <p className="leading-relaxed">El Operador se reserva el derecho absoluto de <strong>suspender, desactivar o cancelar definitivamente</strong> la cuenta de un Usuario, así como invalidar todos sus Puntos y beneficios, si se detecta fraude, alteración del código QR, colusión con personal de la estación, o cualquier violación a los presentes Términos.</p>
-                            </div>
-
-                            <div className="space-y-2">
-                                <h4 className="font-black text-gray-900 text-sm">7. Modificaciones y Terminación del Programa</h4>
-                                <p className="leading-relaxed">El Operador puede modificar estos Términos, el esquema de Puntos, o dar por terminado el Programa "Club Pilotos Carreto" en su totalidad en cualquier momento. En caso de terminación, se notificará a los Usuarios mediante la Aplicación otorgando un plazo no menor a 30 días naturales para el canje de los Puntos vigentes; agotado dicho plazo, los Puntos perderán todo valor.</p>
-                            </div>
-
-                            <div className="space-y-2">
-                                <h4 className="font-black text-gray-900 text-sm">8. Fallas Técnicas</h4>
-                                <p className="leading-relaxed">El Operador no garantiza que la Aplicación funcione libre de errores, interrupciones o virus. El Operador no será responsable de la imposibilidad de acumular o canjear Puntos debido a fallas en el sistema, conectividad de red o mantenimiento de la Aplicación.</p>
-                            </div>
-                        </div>
-
-                        <div className="p-4 sm:p-6 border-t border-gray-100 bg-white shrink-0">
-                            <button 
-                                onClick={() => setShowTerms(false)}
-                                className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl text-lg shadow-lg hover:bg-gray-800 active:scale-95 transition-all duration-300"
-                            >
-                                He leído y acepto
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <TermsModal 
+                isOpen={showTerms} 
+                onClose={() => setShowTerms(false)} 
+            />
+            
+            <PrivacyModal 
+                isOpen={showPrivacy} 
+                onClose={() => setShowPrivacy(false)} 
+            />
 
             {/* ============================================================== */}
-            {/* VENTANA EMERGENTE (MODAL) DE AVISO DE PRIVACIDAD (PRODUCCIÓN) */}
+            {/* VENTANA EMERGENTE (MODAL) DE RECUPERAR CONTRASEÑA */}
             {/* ============================================================== */}
-            {showPrivacy && (
-                <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in touch-none">
-                    <div className="bg-white rounded-3xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            {showResetModal && (
+                <div className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in touch-none">
+                    <div className="bg-white rounded-[2rem] w-full max-w-sm p-7 shadow-2xl relative overflow-hidden flex flex-col">
                         
-                        <div className="flex justify-between items-center p-5 sm:p-6 border-b border-gray-100 bg-gray-50 shrink-0">
-                            <h3 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight">Aviso de Privacidad Integral</h3>
-                            <button 
-                                onClick={() => setShowPrivacy(false)}
-                                className="p-2 text-gray-400 bg-white border border-gray-200 rounded-full hover:bg-gray-100 active:scale-90 transition-all shadow-sm"
-                            >
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
+                        {/* Botón Cerrar */}
+                        <button 
+                            onClick={() => { setShowResetModal(false); setResetMessage(null); setResetInput(''); }}
+                            className="absolute top-4 right-4 p-2 text-gray-400 bg-gray-50 rounded-full hover:bg-gray-100 active:scale-90 transition-all"
+                        >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
                         
-                        <div className="overflow-y-auto p-5 sm:p-6 space-y-5 text-sm text-gray-600 pb-8 overscroll-contain">
-                            <p className="font-bold text-gray-400 uppercase tracking-widest text-[10px]">En cumplimiento con la LFPDPPP</p>
-                            
-                            <p className="leading-relaxed">
-                                <strong>Carreto Gas</strong> (en lo sucesivo "El Responsable"), es el responsable del uso, tratamiento y protección de sus datos personales, y al respecto le informamos lo siguiente en estricto apego a la <strong>Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP)</strong>, su Reglamento y los Lineamientos del Aviso de Privacidad.
-                            </p>
-
-                            <div className="space-y-2">
-                                <h4 className="font-black text-gray-900 text-sm">1. Datos Personales que Recabamos</h4>
-                                <p className="leading-relaxed">Para llevar a cabo las finalidades descritas en el presente aviso, recabaremos los siguientes datos personales de identificación y contacto:</p>
-                                <ul className="list-disc pl-5 space-y-1 marker:text-[#136A40] font-medium">
-                                    <li>Nombre completo.</li>
-                                    <li>Número de teléfono celular.</li>
-                                    <li>Dirección de correo electrónico.</li>
-                                    <li>Edad o rango de edad.</li>
-                                </ul>
-                                <p className="text-xs text-gray-500 mt-2"><em>* El Responsable no recaba datos personales considerados como sensibles según la Ley.</em></p>
-                            </div>
-
-                            <div className="space-y-2">
-                                <h4 className="font-black text-gray-900 text-sm">2. Finalidades del Tratamiento de Datos</h4>
-                                <p className="leading-relaxed">Sus datos personales serán utilizados para las siguientes <strong>Finalidades Primarias</strong> (necesarias para el servicio):</p>
-                                <ul className="list-disc pl-5 space-y-1.5 marker:text-[#136A40] leading-relaxed">
-                                    <li>Creación, gestión, administración y actualización de su cuenta en el programa "Club Pilotos Carreto".</li>
-                                    <li>Asignación, registro y validación de Puntos acumulados y Niveles alcanzados.</li>
-                                    <li>Verificación de identidad al momento de realizar el canje de recompensas o atención a quejas.</li>
-                                </ul>
-                                <p className="leading-relaxed mt-2">De manera adicional, utilizaremos su información para las siguientes <strong>Finalidades Secundarias</strong> (no necesarias para el servicio, pero nos permiten brindarle una mejor atención):</p>
-                                <ul className="list-disc pl-5 space-y-1.5 marker:text-[#136A40] leading-relaxed">
-                                    <li>Envío de promociones exclusivas, publicidad, y boletines informativos.</li>
-                                    <li>Análisis de comportamiento de consumo y perfilamiento para mejorar nuestras ofertas.</li>
-                                </ul>
-                            </div>
-
-                            <div className="space-y-2">
-                                <h4 className="font-black text-gray-900 text-sm">3. Transferencia de Datos Personales</h4>
-                                <p className="leading-relaxed">
-                                    Le informamos que sus datos personales <strong>no serán vendidos, alquilados ni transferidos a terceros</strong> para fines de comercialización. Únicamente podrán ser compartidos con proveedores de servicios tecnológicos (como servicios de alojamiento en la nube, ej. Google/Firebase) estrictamente para mantener el funcionamiento de la Aplicación, quienes están obligados a mantener la confidencialidad de los datos.
-                                </p>
-                            </div>
-
-                            <div className="space-y-2">
-                                <h4 className="font-black text-gray-900 text-sm">4. Ejercicio de los Derechos ARCO</h4>
-                                <p className="leading-relaxed">
-                                    Usted tiene derecho a conocer qué datos tenemos (<strong>A</strong>cceso), solicitar la corrección de su información si está desactualizada, es inexacta o incompleta (<strong>R</strong>ectificación), que la eliminemos de nuestros registros (<strong>C</strong>ancelación), así como oponerse al uso de sus datos para fines específicos (<strong>O</strong>posición).
-                                </p>
-                                <p className="leading-relaxed">
-                                    Para el ejercicio de cualquiera de los derechos ARCO, o para revocar su consentimiento para el tratamiento de sus datos, usted deberá presentar la solicitud respectiva acudiendo físicamente a la administración de nuestra estación de servicio Carreto Gas, presentando una identificación oficial vigente.
-                                </p>
-                            </div>
-
-                            <div className="space-y-2">
-                                <h4 className="font-black text-gray-900 text-sm">5. Cambios al Aviso de Privacidad</h4>
-                                <p className="leading-relaxed">
-                                    El presente aviso de privacidad puede sufrir modificaciones, cambios o actualizaciones derivadas de nuevos requerimientos legales; de nuestras propias necesidades por los servicios que ofrecemos; de nuestras prácticas de privacidad o por otras causas. Nos comprometemos a mantenerlo informado sobre dichos cambios publicando la versión actualizada en esta misma sección dentro de la Aplicación.
-                                </p>
-                            </div>
+                        {/* Icono Cabecera */}
+                        <div className="w-16 h-16 bg-orange-50 text-[#e35212] rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
+                            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
                         </div>
 
-                        <div className="p-4 sm:p-6 border-t border-gray-100 bg-white shrink-0">
+                        <h3 className="text-xl font-black text-gray-900 text-center mb-2 tracking-tight">Recuperar Contraseña</h3>
+                        <p className="text-sm text-gray-500 text-center mb-6 leading-relaxed">
+                            Ingresa tu <span className="font-bold text-gray-700">correo</span> o <span className="font-bold text-gray-700">celular registrado</span> y te enviaremos un enlace seguro.
+                        </p>
+
+                        {/* Mensaje de Error/Éxito */}
+                        {resetMessage && (
+                            <div className={`mb-5 p-3.5 rounded-xl text-xs font-bold flex gap-3 items-center ${resetMessage.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                                <span className="text-xl leading-none shrink-0">{resetMessage.type === 'success' ? '✅' : '⚠️'}</span>
+                                <p className="leading-tight">{resetMessage.text}</p>
+                            </div>
+                        )}
+
+                        {/* Formulario */}
+                        <form onSubmit={handlePasswordReset} className="space-y-4">
+                            <InputIconWrapper icon={<UserIcon className="w-5 h-5"/>}>
+                                <input 
+                                    type="text" 
+                                    placeholder="Correo o Celular" 
+                                    value={resetInput} 
+                                    onChange={e => setResetInput(e.target.value)} 
+                                    className={inputClasses}
+                                />
+                            </InputIconWrapper>
+
                             <button 
-                                onClick={() => setShowPrivacy(false)}
-                                className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl text-lg shadow-lg hover:bg-gray-800 active:scale-95 transition-all duration-300"
+                                type="submit" 
+                                disabled={isResetting}
+                                className="w-full bg-gradient-to-r from-[#e35212] to-[#ff7b42] text-white font-bold py-3.5 rounded-xl shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 active:scale-95 transition-all disabled:opacity-70 flex justify-center items-center gap-2 mt-2"
                             >
-                                He leído y comprendo
+                                {isResetting ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                        Enviando...
+                                    </>
+                                ) : 'Enviar enlace seguro'}
                             </button>
-                        </div>
+                        </form>
                     </div>
                 </div>
             )}
@@ -475,4 +407,4 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onRegister }) => {
     );
 };
 
-export default AuthScreen;  
+export default AuthScreen;
