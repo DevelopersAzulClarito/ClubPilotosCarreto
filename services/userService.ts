@@ -2,7 +2,8 @@ import { db, auth } from '../components/firebaseTemp';
 import { 
     createUserWithEmailAndPassword, 
     signInWithEmailAndPassword, 
-    signOut 
+    signOut,
+    sendPasswordResetEmail
 } from 'firebase/auth';
 import { 
     collection, 
@@ -174,4 +175,29 @@ export const updateUserStats = async (docId: string, newXp: number, newLevel: nu
 
 export const logoutFirebase = async () => {
     await signOut(auth);
+}; 
+
+// --- RECUPERAR CONTRASEÑA INTELIGENTE ---
+export const resetPasswordWithIdentifier = async (identifier: string): Promise<void> => {
+    let emailToUse = identifier.trim();
+
+    // Si el usuario ingresó un celular (no tiene '@')
+    if (!identifier.includes('@')) {
+        const cleanPhone = identifier.replace(/\D/g, '').trim();
+        const q = query(collection(db, USERS_COLLECTION), where("phone", "==", cleanPhone));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            throw new Error("Este número no está registrado.");
+        }
+
+        const userDoc = snapshot.docs[0].data();
+        if (!userDoc.email) {
+            throw new Error("Tu cuenta no tiene un correo vinculado.");
+        }
+        emailToUse = userDoc.email;
+    }
+
+    // Enviamos el correo oficial de Firebase
+    await sendPasswordResetEmail(auth, emailToUse);
 };
