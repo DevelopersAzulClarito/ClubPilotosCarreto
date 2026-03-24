@@ -4,13 +4,9 @@ import PromotionsCarousel from './PromotionsCarousel';
 import LevelRewards from './LevelRewards';
 import XPBar from './XPBar';
 
-// IMPORTANTE: Usamos la nueva función que soporta niveles infinitos y empezar en Nivel 0
 import { getRequiredXpForLevel } from '../constants'; 
-
-// Importamos las frases motivacionales
 import { motivationalPhrases } from './FrasesM'; 
 
-// Importaciones de Firebase para traer los datos reales
 import { db } from '../components/firebaseTemp'; 
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 
@@ -35,11 +31,9 @@ const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) =>
     useEffect(() => {
         const fetchPromotions = async () => {
             try {
-                // Ahora traemos todas las promociones (sin filtro manual de "activo")
                 const q = query(collection(db, "promotions"));
                 const snapshot = await getDocs(q);
                 
-                // Obtenemos la fecha actual en formato local YYYY-MM-DD
                 const today = new Date();
                 const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
                 
@@ -50,15 +44,11 @@ const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) =>
                         title: data.titulo || '', 
                         description: data.descripcion || '', 
                         imageUrl: data.imageUrl || 'https://images.unsplash.com/photo-1617523232112-398b67b1efb2?q=80&w=400&auto=format&fit=crop',
-                        // La propiedad isActive ya no es relevante manualmente, dependerá de validUntil
                         isActive: true, 
                         validUntil: data.fechaFin || null
                     } as Promotion; 
                 }).filter(promo => {
-                    // EXPIRACIÓN AUTOMÁTICA: 
-                    // Si no tiene fecha límite configurada, se muestra siempre
                     if (!promo.validUntil) return true;
-                    // Si tiene fecha límite, verificamos que no haya expirado hoy
                     return promo.validUntil >= todayStr;
                 });
                 
@@ -96,7 +86,7 @@ const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) =>
         fetchRewards();
     }, []);
 
-    // --- LÓGICA DE PROGRESO DE NIVEL ACTUALIZADA ---
+    // --- LÓGICA DE PROGRESO DE NIVEL (AHORA BASADA 100% EN XP) ---
     const requiredXp = getRequiredXpForLevel(player.level);
     const hasEnoughXP = player.xp >= requiredXp;
     const missingXp = Math.max(0, requiredXp - player.xp);
@@ -104,41 +94,52 @@ const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) =>
     return (
         <div className="w-full max-w-md mx-auto pb-24 overflow-x-hidden bg-[#F4F5F7] min-h-screen">
             
-            {/* --- SECCIÓN SUPERIOR: PROGRESO --- */}
+            {/* --- SECCIÓN SUPERIOR: PUNTOS Y XP --- */}
             <div className="px-5 sm:px-6 pt-6 space-y-7">
                 
-                {/* Tarjeta Premium de Nivel y Puntos */}
-                <div className="bg-white border border-gray-100 rounded-[2rem] p-7 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden z-0">
+                {/* Tarjeta Premium de Nivel, Puntos y XP */}
+                <div className="bg-white border border-gray-100 rounded-[2rem] p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden z-0">
                     <div className="absolute top-0 right-0 -mr-6 -mt-6 w-32 h-32 bg-emerald-50 rounded-full opacity-80 blur-2xl -z-10"></div>
                     <div className="absolute bottom-0 left-0 -ml-6 -mb-6 w-24 h-24 bg-orange-50 rounded-full opacity-60 blur-xl -z-10"></div>
                     
-                    <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-[0.2em] mb-2 relative">
-                        Mis Puntos (Nivel {player.level})
-                    </p>
-                    <p className="text-6xl font-black text-[#136A40] tracking-tighter mb-1 relative drop-shadow-sm">
-                        {player.xp.toLocaleString()}
-                    </p>
-                    <p className="text-xs font-semibold text-gray-400 relative mt-2">
-                        Puntos de experiencia acumulados
-                    </p>
-                </div>
-                
-                {/* Barra de Progreso */}
-                <div className="w-full space-y-3 px-1">
-                    <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 px-1">
-                        <span>Progreso Actual</span>
-                        <span>Meta: {requiredXp.toLocaleString()} XP</span>
+                    {/* --- NUEVO DISEÑO DIVIDIDO: PUNTOS VS XP --- */}
+                    <div className="flex justify-between items-end mb-6">
+                        <div>
+                            <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-[0.2em] mb-1">
+                                Mis Puntos
+                            </p>
+                            <p className="text-5xl font-black text-[#136A40] tracking-tighter drop-shadow-sm leading-none">
+                                {/* Usamos player.points, si no existe caemos en player.xp por compatibilidad */}
+                                {(player.points ?? player.xp).toLocaleString()}
+                            </p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-[10px] font-extrabold text-[#e35212] uppercase tracking-[0.2em] mb-1">
+                                Nivel {player.level}
+                            </p>
+                            <p className="text-2xl font-bold text-gray-800 tracking-tight leading-none">
+                                {player.xp.toLocaleString()} <span className="text-sm font-semibold text-gray-400">XP</span>
+                            </p>
+                        </div>
                     </div>
                     
-                    <XPBar currentXp={player.xp} maxXp={requiredXp} />
-                    
-                    <p className="text-sm text-gray-500 text-center font-medium mt-2">
-                        {hasEnoughXP ? (
-                            <span className="text-emerald-600 font-bold">¡Tienes puntos para subir al Nivel {player.level + 1}!</span>
-                        ) : (
-                            <>Faltan <span className="font-bold text-gray-900">{missingXp.toLocaleString()}</span> puntos para subir</>
-                        )}
-                    </p>
+                    {/* Barra de Progreso basada en XP */}
+                    <div className="w-full space-y-3">
+                        <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">
+                            <span>Progreso de Nivel</span>
+                            <span>Meta: {requiredXp.toLocaleString()} XP</span>
+                        </div>
+                        
+                        <XPBar currentXp={player.xp} maxXp={requiredXp} />
+                        
+                        <p className="text-sm text-gray-500 text-center font-medium mt-2">
+                            {hasEnoughXP ? (
+                                <span className="text-emerald-600 font-bold">¡Tienes la XP para subir al Nivel {player.level + 1}!</span>
+                            ) : (
+                                <>Faltan <span className="font-bold text-gray-900">{missingXp.toLocaleString()}</span> XP para subir</>
+                            )}
+                        </p>
+                    </div>
                 </div>
 
                 {/* Botón de Acción Principal */}
@@ -185,7 +186,6 @@ const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) =>
                         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#e35212]"></div>
                     </div>
                 ) : promotions.length > 0 ? (
-                    // AQUÍ ESTÁ EL CAMBIO PRINCIPAL PARA CENTRAR
                     <div className={`w-full ${promotions.length === 1 ? 'flex justify-center px-5 sm:px-6' : ''}`}>
                         <div className={`${promotions.length === 1 ? 'w-full max-w-[320px]' : 'w-full'}`}>
                             <PromotionsCarousel promotions={promotions} />

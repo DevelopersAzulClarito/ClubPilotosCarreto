@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PlayerProfile, Reward, ActiveTab } from '../../types';
 import { db } from '../firebaseTemp';
 import { collection, getDocs, query, orderBy, doc, updateDoc } from 'firebase/firestore';
-import { getRequiredXpForLevel } from '../../constants'; // Usamos la nueva función de Puntos
+import { getRequiredXpForLevel } from '../../constants'; // Usamos la nueva función de XP
 import XPBar from '../XPBar';
 import WinnerScreen from '../WinnerScreen'; // Importamos la animación de celebración
 
@@ -73,9 +73,9 @@ const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) =
         );
     }
 
-    // --- LÓGICA DE NIVELES INFINITOS (EN PUNTOS) ---
-    const requiredPoints = getRequiredXpForLevel(player.level);
-    const canLevelUp = player.xp >= requiredPoints;
+    // --- LÓGICA DE NIVELES INFINITOS BASADO EN XP ---
+    const requiredXp = getRequiredXpForLevel(player.level);
+    const canLevelUp = player.xp >= requiredXp;
 
     const handleLevelUp = async () => {
         if (!canLevelUp) return;
@@ -86,10 +86,9 @@ const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) =
             const newLevel = player.level + 1;
             
             await updateDoc(userRef, {
-                level: newLevel,
-                // Actualizamos ambos campos para mantener compatibilidad en BD
-                xp: player.xp - requiredPoints,
-                points: player.xp - requiredPoints 
+                level: newLevel
+                // NOTA IMPORTANTE: Ya NO restamos XP ni Puntos. 
+                // La XP es histórica y determina el nivel, los Puntos son para la tienda.
             });
 
             // Guardamos el nivel alcanzado y mostramos la animación
@@ -145,12 +144,12 @@ const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) =
 
                         <div className="w-full bg-black/20 p-4 rounded-2xl border border-white/10 mb-4">
                             <div className="flex justify-between items-end mb-2 text-sm font-bold">
-                                <span>Puntos de Nivel</span>
-                                <span className="text-emerald-300">{player.xp.toLocaleString()} / {requiredPoints.toLocaleString()} Pts</span>
+                                <span>Experiencia (XP)</span>
+                                <span className="text-emerald-300">{player.xp.toLocaleString()} / {requiredXp.toLocaleString()} XP</span>
                             </div>
                             <div className="opacity-90">
-                                {/* Barra actualizada a nueva prop si ya las usa, o asumiendo currentXp/maxXp */}
-                                <XPBar currentXp={player.xp} maxXp={requiredPoints} />
+                                {/* Corregido para enviar currentXp y asegurar compatibilidad */}
+                                <XPBar currentXp={player.xp} maxXp={requiredXp} />
                             </div>
                         </div>
 
@@ -172,7 +171,7 @@ const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) =
                                     ¡Subir a Nivel {player.level + 1}!
                                 </>
                             ) : (
-                                `Faltan ${(requiredPoints - player.xp).toLocaleString()} Puntos`
+                                `Faltan ${(requiredXp - player.xp).toLocaleString()} XP`
                             )}
                         </button>
                     </div>
@@ -223,7 +222,6 @@ const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) =
                                         )}
 
                                         {/* Icono de Estado / Avatar del Nivel */}
-                                        {/* El mr-5 y flex-shrink se asignan al contenedor para que el centrado sea perfecto */}
                                         <div className="relative mr-5 flex-shrink-0">
                                             <div className={`w-16 h-16 rounded-[1.25rem] flex items-center justify-center shadow-sm border-2 z-10 relative ${
                                                 isUnlocked 
@@ -241,7 +239,7 @@ const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) =
                                                 )}
                                             </div>
                                             
-                                            {/* Etiqueta flotante del número de nivel rediseñada */}
+                                            {/* Etiqueta flotante del número de nivel */}
                                             {isUnlocked && (
                                                 <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full border-2 border-white shadow-sm z-20">
                                                     LVL {lvl.level}

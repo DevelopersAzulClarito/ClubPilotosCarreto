@@ -140,6 +140,18 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ player, onLogout, onAvata
                     </div>
                 </div>
             )}
+            
+            {/* Animación opcional para el modal */}
+            <style dangerouslySetInnerHTML={{__html: `
+                @keyframes slideUpSheet {
+                    from { transform: translateY(100%); }
+                    to { transform: translateY(0); }
+                }
+                .anim-bottom-sheet {
+                    animation: slideUpSheet 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+                }
+            `}} />
+
             {/* --- MODAL PARA EDITAR NOMBRE (ELEVADO EN MÓVIL PARA EVITAR TECLADO) --- */}
             {isEditingName && (
                 <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-start pt-[15vh] sm:pt-0 sm:items-center justify-center p-4 touch-none">
@@ -231,41 +243,15 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ player, onLogout, onAvata
 
                 {/* --- NOMBRE EDITABLE Y TÍTULO --- */}
                 <div className="text-center w-full max-w-xs">
-                    {isEditingName ? (
-                        <div className="flex items-center justify-center gap-2 animate-fade-in">
-                            <input
-                                type="text"
-                                value={editNameValue}
-                                onChange={(e) => setEditNameValue(e.target.value)}
-                                className="text-xl font-black text-center text-gray-900 border-b-2 border-[#e35212] bg-transparent focus:outline-none w-full max-w-[200px]"
-                                autoFocus
-                            />
-                            <button
-                                onClick={handleSaveName}
-                                disabled={isSavingName}
-                                className="bg-emerald-500 text-white p-1.5 rounded-lg shadow-sm active:scale-90 transition-transform"
-                            >
-                                {isSavingName ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <CheckIcon className="w-5 h-5" />}
-                            </button>
-                            <button
-                                onClick={() => setIsEditingName(false)}
-                                disabled={isSavingName}
-                                className="bg-gray-200 text-gray-600 p-1.5 rounded-lg shadow-sm active:scale-90 transition-transform"
-                            >
-                                <XMarkIcon className="w-5 h-5" />
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="flex items-center justify-center gap-2">
-                            <h1 className="text-2xl font-black text-gray-900 tracking-tight truncate">{player.name}</h1>
-                            <button
-                                onClick={() => { setEditNameValue(player.name); setIsEditingName(true); }}
-                                className="text-gray-400 hover:text-[#e35212] active:scale-90 transition-all p-1"
-                            >
-                                <PencilIcon className="w-5 h-5" />
-                            </button>
-                        </div>
-                    )}
+                    <div className="flex items-center justify-center gap-2">
+                        <h1 className="text-2xl font-black text-gray-900 tracking-tight truncate">{player.name}</h1>
+                        <button
+                            onClick={() => { setEditNameValue(player.name); setIsEditingName(true); }}
+                            className="text-gray-400 hover:text-[#e35212] active:scale-90 transition-all p-1"
+                        >
+                            <PencilIcon className="w-5 h-5" />
+                        </button>
+                    </div>
                     <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-[0.2em] mt-1">Piloto Oficial</p>
                 </div>
 
@@ -279,16 +265,16 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ player, onLogout, onAvata
                     <XPBar currentXp={player.xp} maxXp={requiredXp} />
 
                     <div className="flex justify-between mt-3 text-[11px] text-gray-500 font-bold uppercase tracking-wider">
-                        <span>{player.xp.toLocaleString()} Pts</span>
-                        <span>Meta: {requiredXp.toLocaleString()} Pts</span>
+                        <span>{player.xp.toLocaleString()} XP</span>
+                        <span>Meta: {requiredXp.toLocaleString()} XP</span>
                     </div>
 
                     <div className="mt-5 pt-4 border-t border-gray-100 text-center">
                         <p className="text-xs text-gray-500 font-medium">
                             {requiredXp - player.xp > 0 ? (
-                                <>¡Te faltan <span className="font-bold text-gray-900">{(requiredXp - player.xp).toLocaleString()} Pts</span> para subir!</>
+                                <>¡Te faltan <span className="font-bold text-gray-900">{(requiredXp - player.xp).toLocaleString()} XP</span> para subir!</>
                             ) : (
-                                <span className="text-emerald-600 font-bold">¡Tienes puntos suficientes para subir de nivel!</span>
+                                <span className="text-emerald-600 font-bold">¡Tienes experiencia suficiente para subir de nivel!</span>
                             )}
                         </p>
                     </div>
