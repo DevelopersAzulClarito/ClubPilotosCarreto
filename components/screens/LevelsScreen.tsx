@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PlayerProfile, Reward, ActiveTab } from '../../types';
 import { db } from '../firebaseTemp';
-import { collection, getDocs, query, orderBy, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { getRequiredXpForLevel } from '../../constants'; // Usamos la nueva función de XP
 import XPBar from '../XPBar';
 import WinnerScreen from '../WinnerScreen'; // Importamos la animación de celebración
@@ -39,10 +39,16 @@ const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) =
     const [loading, setLoading] = useState(true);
     const [isLevelingUp, setIsLevelingUp] = useState(false);
     
+    // --- ESTADOS CONECTADOS DIRECTAMENTE A LA BASE DE DATOS ---
+    const [dbXp, setDbXp] = useState<number>(0);
+    const [dbPoints, setDbPoints] = useState<number>(0);
+    const [dbLevel, setDbLevel] = useState<number>(player?.level || 0);
+
     // Estados para controlar cuándo mostrar la animación y con qué nivel
     const [showCelebration, setShowCelebration] = useState(false);
     const [celebrationLevel, setCelebrationLevel] = useState<number | null>(null);
 
+    // 1. Efecto para obtener la lista de recompensas
     useEffect(() => {
         const fetchLevels = async () => {
             try {
@@ -63,6 +69,27 @@ const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) =
         fetchLevels();
     }, []);
 
+    // 2. Efecto para ESCUCHAR EN TIEMPO REAL el documento del usuario en la BD
+    useEffect(() => {
+        if (!player?.id && !player?.customerId) return;
+        
+        const userId = player.id || player.customerId;
+        const userRef = doc(db, 'customers', userId);
+        
+        // onSnapshot "jala" los datos exactos del documento (xp, points, level) al instante
+        const unsubscribe = onSnapshot(userRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                // Extraemos exactamente los campos de tu base de datos
+                setDbXp(data.xp || 0);
+                setDbPoints(data.points || 0);
+                setDbLevel(data.level || 0);
+            }
+        });
+
+        return () => unsubscribe();
+    }, [player]);
+
     // --- PROTECCIÓN CONTRA ERRORES ---
     if (!player) {
         return (
@@ -73,9 +100,12 @@ const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) =
         );
     }
 
-    // --- LÓGICA DE NIVELES INFINITOS BASADO EN XP ---
-    const requiredXp = getRequiredXpForLevel(player.level);
-    const canLevelUp = player.xp >= requiredXp;
+    // --- LÓGICA DE NIVELES INFINITOS BASADO DIRECTAMENTE EN LA BD ---
+    const requiredXp = getRequiredXpForLevel(dbLevel);
+    const canLevelUp = dbXp >= requiredXp;
+    
+    // Cálculo de porcentaje para la barra visual (Usando EXCLUSIVAMENTE dbXp)
+    const percentage = requiredXp > 0 ? Math.min(100, Math.round((dbXp / requiredXp) * 100)) : 100;
 
     const handleLevelUp = async () => {
         if (!canLevelUp) return;
@@ -83,7 +113,7 @@ const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) =
         setIsLevelingUp(true);
         try {
             const userRef = doc(db, 'customers', player.id || player.customerId); 
-            const newLevel = player.level + 1;
+            const newLevel = dbLevel + 1;
             
             await updateDoc(userRef, {
                 level: newLevel
@@ -121,7 +151,6 @@ const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) =
                     onClose={() => setShowCelebration(false)} 
                 />
             )}
-            
 
             {/* --- HEADER --- */}
             <header className="px-6 py-5 bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-20">
@@ -130,26 +159,46 @@ const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) =
 
             <div className="px-5 pt-6 space-y-8">
                 
-                {/* --- TARJETA HERO: NIVEL ACTUAL Y SUBIR DE NIVEL --- */}
+                {/* --- TARJETA HERO: PUNTOS, NIVEL Y XP --- */}
                 <div className="bg-gradient-to-br from-[#136A40] to-emerald-700 rounded-[2rem] p-6 text-white shadow-xl shadow-emerald-900/20 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
                     
                     <div className="relative z-10 flex flex-col items-center text-center">
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-200 mb-1">
-                            Tu Nivel Actual
-                        </span>
-                        <h1 className="text-6xl font-black mb-4 drop-shadow-md">
-                            {player.level}
-                        </h1>
-
-                        <div className="w-full bg-black/20 p-4 rounded-2xl border border-white/10 mb-4">
-                            <div className="flex justify-between items-end mb-2 text-sm font-bold">
-                                <span>Experiencia (XP)</span>
-                                <span className="text-emerald-300">{player.xp.toLocaleString()} / {requiredXp.toLocaleString()} XP</span>
+                        
+                        {/* --- NUEVO LAYOUT: PUNTOS Y XP DIVIDIDOS Y ESTRICTOS --- */}
+                        <div className="flex justify-between items-end mb-6 w-full px-2">
+                            <div className="text-left">
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-200 mb-1 block">
+                                    Mis Puntos
+                                </span>
+                                <span className="text-4xl font-black drop-shadow-md leading-none">
+                                    {/* Muestra SOLAMENTE los puntos exactos de la BD */}
+                                    {dbPoints.toLocaleString()}
+                                </span>
                             </div>
-                            <div className="opacity-90">
-                                {/* Corregido para enviar currentXp y asegurar compatibilidad */}
-                                <XPBar currentXp={player.xp} maxXp={requiredXp} />
+                            <div className="text-right">
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-200 mb-1 block">
+                                    Nivel {dbLevel}
+                                </span>
+                                <span className="text-4xl font-black drop-shadow-md leading-none">
+                                    {/* Muestra SOLAMENTE la XP exacta de la BD */}
+                                    {dbXp.toLocaleString()} <span className="text-xl font-bold text-emerald-200">XP</span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="w-full bg-black/20 p-5 rounded-2xl border border-white/10 mb-5 shadow-inner">
+                            <div className="flex justify-between items-end mb-3 text-sm font-bold">
+                                <span>Progreso al Nivel {dbLevel + 1}</span>
+                                <span className="text-emerald-300">{percentage}%</span>
+                            </div>
+                            <div className="opacity-100 mb-3">
+                                {/* Barra conectada puramente a la XP de la BD */}
+                                <XPBar currentXp={dbXp} maxXp={requiredXp} />
+                            </div>
+                            <div className="flex justify-between text-[10px] font-bold text-emerald-200/80 uppercase tracking-widest">
+                                <span>{dbXp.toLocaleString()} XP</span>
+                                <span>Meta: {requiredXp.toLocaleString()} XP</span>
                             </div>
                         </div>
 
@@ -168,10 +217,10 @@ const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) =
                             ) : canLevelUp ? (
                                 <>
                                     <ArrowUpIcon className="w-6 h-6 animate-bounce" />
-                                    ¡Subir a Nivel {player.level + 1}!
+                                    ¡Subir a Nivel {dbLevel + 1}!
                                 </>
                             ) : (
-                                `Faltan ${(requiredXp - player.xp).toLocaleString()} XP`
+                                `Faltan ${(requiredXp - dbXp).toLocaleString()} XP`
                             )}
                         </button>
                     </div>
@@ -199,8 +248,8 @@ const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) =
                             <div className="absolute left-[2.5rem] top-8 bottom-8 w-0.5 bg-gray-200 rounded-full -z-0"></div>
 
                             {levels.map((lvl) => {
-                                const isUnlocked = player.level >= lvl.level;
-                                const isNext = player.level + 1 === lvl.level;
+                                const isUnlocked = dbLevel >= lvl.level;
+                                const isNext = dbLevel + 1 === lvl.level;
 
                                 return (
                                     <div 
