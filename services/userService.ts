@@ -62,10 +62,12 @@ export const loginWithIdentifier = async (identifier: string, password: string):
             name: data.name,
             phone: data.phone,
             email: data.email,
-            // Usamos ?? en lugar de || para que respete el 0
             xp: data.points ?? 0, 
             level: data.level ?? 0, 
             avatarUrl: data.avatarUrl || `https://i.pravatar.cc/150?u=${data.phone}`,
+            // NUEVO: Extraemos los check-ins de la BD
+            checkIns: data.checkIns || data.visits || 0,
+            visits: data.visits || data.checkIns || 0
         } as PlayerProfile;
     } else {
         throw new Error("Login exitoso pero no se encontró perfil en base de datos.");
@@ -102,10 +104,12 @@ export const registerWithEmail = async (userData: { email: string; password: str
         return {
             ...data,
             id: existingDoc.id,
-            // Usamos ?? en lugar de || para que respete el 0
             xp: data.points ?? 0,
             level: data.level ?? 0,
-            avatarUrl: data.avatarUrl || `https://i.pravatar.cc/150?u=${cleanPhone}`
+            avatarUrl: data.avatarUrl || `https://i.pravatar.cc/150?u=${cleanPhone}`,
+            // NUEVO: Extraemos los check-ins de la BD
+            checkIns: data.checkIns || data.visits || 0,
+            visits: data.visits || data.checkIns || 0
         } as PlayerProfile;
 
     } else {
@@ -117,7 +121,9 @@ export const registerWithEmail = async (userData: { email: string; password: str
             email: userData.email,
             age: userData.age,
             points: 0,
-            level: 0, // <-- AHORA LOS NUEVOS USUARIOS EMPIEZAN EN NIVEL 0
+            level: 0,
+            checkIns: 0, // Los nuevos usuarios empiezan con 0 check-ins
+            visits: 0,
             authUid: uid,
             createdAt: new Date().toISOString()
         });
@@ -129,7 +135,9 @@ export const registerWithEmail = async (userData: { email: string; password: str
             phone: cleanPhone,
             email: userData.email,
             xp: 0,
-            level: 0, // <-- AHORA LOS NUEVOS USUARIOS EMPIEZAN EN NIVEL 0
+            level: 0,
+            checkIns: 0,
+            visits: 0,
             avatarUrl: `https://i.pravatar.cc/150?u=${cleanPhone}`
         } as PlayerProfile;
     }
@@ -152,10 +160,12 @@ export const subscribeToUser = (email: string, callback: (user: PlayerProfile) =
                         name: data.name,
                         phone: data.phone,
                         email: data.email,
-                        // Usamos ?? en lugar de || para que respete el 0
                         xp: data.points ?? 0,
                         level: data.level ?? 0,
-                        avatarUrl: data.avatarUrl || `https://i.pravatar.cc/150?u=${data.phone}`
+                        avatarUrl: data.avatarUrl || `https://i.pravatar.cc/150?u=${data.phone}`,
+                        // NUEVO: Actualización en vivo de los check-ins
+                        checkIns: data.checkIns || data.visits || 0,
+                        visits: data.visits || data.checkIns || 0
                     } as PlayerProfile);
                 }
             });
@@ -167,8 +177,8 @@ export const subscribeToUser = (email: string, callback: (user: PlayerProfile) =
 export const updateUserStats = async (docId: string, newXp: number, newLevel: number) => {
     const userRef = doc(db, USERS_COLLECTION, docId);
     await updateDoc(userRef, {
-        points: newXp, // Guardamos en 'points' para tu BD
-        xp: newXp,     // Guardamos 'xp' por redundancia/compatibilidad
+        points: newXp,
+        xp: newXp,
         level: newLevel
     });
 };
@@ -181,7 +191,6 @@ export const logoutFirebase = async () => {
 export const resetPasswordWithIdentifier = async (identifier: string): Promise<void> => {
     let emailToUse = identifier.trim();
 
-    // Si el usuario ingresó un celular (no tiene '@')
     if (!identifier.includes('@')) {
         const cleanPhone = identifier.replace(/\D/g, '').trim();
         const q = query(collection(db, USERS_COLLECTION), where("phone", "==", cleanPhone));
@@ -198,6 +207,5 @@ export const resetPasswordWithIdentifier = async (identifier: string): Promise<v
         emailToUse = userDoc.email;
     }
 
-    // Enviamos el correo oficial de Firebase
     await sendPasswordResetEmail(auth, emailToUse);
 };
