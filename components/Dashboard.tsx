@@ -4,11 +4,11 @@ import PromotionsCarousel from './PromotionsCarousel';
 import LevelRewards from './LevelRewards';
 import XPBar from './XPBar';
 
-import { getRequiredXpForLevel } from '../constants'; 
-import { motivationalPhrases } from './FrasesM'; 
+import { getRequiredXpForLevel } from '../constants'; // Usamos la función de XP
 
+import { motivationalPhrases } from './FrasesM'; 
 import { db } from '../components/firebaseTemp'; 
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, doc, onSnapshot } from 'firebase/firestore';
 
 interface DashboardProps {
     player: PlayerProfile;
@@ -23,11 +23,38 @@ const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) =>
     const [rewards, setRewards] = useState<Reward[]>([]);
     const [loadingRewards, setLoadingRewards] = useState(true);
 
+    // --- ESTADOS CONECTADOS DIRECTAMENTE A LA BASE DE DATOS ---
+    const [dbXp, setDbXp] = useState<number>(0);
+    const [dbPoints, setDbPoints] = useState<number>(0);
+    const [dbLevel, setDbLevel] = useState<number>(player?.level || 0);
+
     const randomPhrase = useMemo(() => {
         const randomIndex = Math.floor(Math.random() * motivationalPhrases.length);
         return motivationalPhrases[randomIndex];
     }, []);
 
+    // 1. Efecto para escuchar en tiempo real el documento del usuario en la BD
+    useEffect(() => {
+        if (!player?.id && !player?.customerId) return;
+        
+        const userId = player.id || player.customerId;
+        const userRef = doc(db, 'customers', userId);
+        
+        // onSnapshot "jala" los datos exactos del documento (xp, points, level) al instante
+        const unsubscribe = onSnapshot(userRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                // Extraemos exactamente los campos de tu base de datos
+                setDbXp(data.xp || 0);
+                setDbPoints(data.points || 0);
+                setDbLevel(data.level || 0);
+            }
+        });
+
+        return () => unsubscribe();
+    }, [player]);
+
+    // 2. Efecto para cargar Promociones y Recompensas
     useEffect(() => {
         const fetchPromotions = async () => {
             try {
@@ -86,10 +113,10 @@ const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) =>
         fetchRewards();
     }, []);
 
-    // --- LÓGICA DE PROGRESO DE NIVEL (AHORA BASADA 100% EN XP) ---
-    const requiredXp = getRequiredXpForLevel(player.level);
-    const hasEnoughXP = player.xp >= requiredXp;
-    const missingXp = Math.max(0, requiredXp - player.xp);
+    // --- LÓGICA DE PROGRESO DE NIVEL BASADA EN LA BD (XP) ---
+    const requiredXp = getRequiredXpForLevel(dbLevel);
+    const hasEnoughXp = dbXp >= requiredXp;
+    const missingXp = Math.max(0, requiredXp - dbXp);
 
     return (
         <div className="w-full max-w-md mx-auto pb-24 overflow-x-hidden bg-[#F4F5F7] min-h-screen">
@@ -102,39 +129,40 @@ const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) =>
                     <div className="absolute top-0 right-0 -mr-6 -mt-6 w-32 h-32 bg-emerald-50 rounded-full opacity-80 blur-2xl -z-10"></div>
                     <div className="absolute bottom-0 left-0 -ml-6 -mb-6 w-24 h-24 bg-orange-50 rounded-full opacity-60 blur-xl -z-10"></div>
                     
-                    {/* --- NUEVO DISEÑO DIVIDIDO: PUNTOS VS XP --- */}
+                    {/* --- LAYOUT DIVIDIDO: PUNTOS VS XP --- */}
                     <div className="flex justify-between items-end mb-6">
                         <div>
                             <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-[0.2em] mb-1">
                                 Mis Puntos
                             </p>
                             <p className="text-5xl font-black text-[#136A40] tracking-tighter drop-shadow-sm leading-none">
-                                {/* Usamos player.points, si no existe caemos en player.xp por compatibilidad */}
-                                {(player.points ?? player.xp).toLocaleString()}
+                                {/* Extraemos estrictamente los puntos de la BD */}
+                                {dbPoints.toLocaleString()}
                             </p>
                         </div>
                         <div className="text-right">
                             <p className="text-[10px] font-extrabold text-[#e35212] uppercase tracking-[0.2em] mb-1">
-                                Nivel {player.level}
+                                Nivel {dbLevel}
                             </p>
                             <p className="text-2xl font-bold text-gray-800 tracking-tight leading-none">
-                                {player.xp.toLocaleString()} <span className="text-sm font-semibold text-gray-400">XP</span>
+                                {/* Extraemos estrictamente la XP de la BD */}
+                                {dbXp.toLocaleString()} <span className="text-sm font-semibold text-gray-400">XP</span>
                             </p>
                         </div>
                     </div>
                     
-                    {/* Barra de Progreso basada en XP */}
+                    {/* Barra de Progreso basada puramente en XP */}
                     <div className="w-full space-y-3">
                         <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">
                             <span>Progreso de Nivel</span>
                             <span>Meta: {requiredXp.toLocaleString()} XP</span>
                         </div>
                         
-                        <XPBar currentXp={player.xp} maxXp={requiredXp} />
+                        <XPBar currentXp={dbXp} maxXp={requiredXp} />
                         
                         <p className="text-sm text-gray-500 text-center font-medium mt-2">
-                            {hasEnoughXP ? (
-                                <span className="text-emerald-600 font-bold">¡Tienes la XP para subir al Nivel {player.level + 1}!</span>
+                            {hasEnoughXp ? (
+                                <span className="text-emerald-600 font-bold">¡Tienes la XP para subir al Nivel {dbLevel + 1}!</span>
                             ) : (
                                 <>Faltan <span className="font-bold text-gray-900">{missingXp.toLocaleString()}</span> XP para subir</>
                             )}
@@ -145,14 +173,14 @@ const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) =>
                 {/* Botón de Acción Principal */}
                 <div className="pt-2">
                     <button
-                        onClick={() => setActiveTab(hasEnoughXP ? 'levels' : 'qr')} 
+                        onClick={() => setActiveTab(hasEnoughXp ? 'levels' : 'qr')} 
                         className={`w-full flex items-center justify-center gap-3 text-white font-black py-4 px-6 rounded-[1.5rem] text-lg transition-transform duration-200 active:scale-[0.97] shadow-xl ${
-                            hasEnoughXP 
+                            hasEnoughXp 
                             ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-500/30 animate-pulse border border-emerald-400/50' 
                             : 'bg-gradient-to-r from-[#e35212] to-[#ff7438] shadow-orange-500/25 border border-orange-400/50'
                         }`}
                     >
-                        {hasEnoughXP ? (
+                        {hasEnoughXp ? (
                             <>
                                 <svg fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25C3.504 21 3 20.496 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25A1.125 1.125 0 0 1 9.75 19.875V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
@@ -186,10 +214,8 @@ const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) =>
                         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#e35212]"></div>
                     </div>
                 ) : promotions.length > 0 ? (
-                    <div className={`w-full ${promotions.length === 1 ? 'flex justify-center px-5 sm:px-6' : ''}`}>
-                        <div className={`${promotions.length === 1 ? 'w-full max-w-[320px]' : 'w-full'}`}>
-                            <PromotionsCarousel promotions={promotions} />
-                        </div>
+                    <div className="w-full">
+                        <PromotionsCarousel promotions={promotions} />
                     </div>
                 ) : (
                     <div className="mx-5 sm:mx-6 bg-white border border-gray-100 rounded-2xl p-8 text-center shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
@@ -212,7 +238,7 @@ const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) =>
                             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#136A40]"></div>
                         </div>
                     ) : rewards.length > 0 ? (
-                        <LevelRewards rewards={rewards} currentLevel={player.level} />
+                        <LevelRewards rewards={rewards} currentLevel={dbLevel} />
                     ) : (
                         <div className="flex flex-col items-center justify-center text-center py-6">
                             <svg className="w-10 h-10 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">

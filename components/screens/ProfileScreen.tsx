@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlayerProfile } from '../../types';
 import XPBar from '../XPBar';
 import { getRequiredXpForLevel } from '../../constants';
@@ -6,7 +6,7 @@ import { PencilIcon } from '../icons/PencilIcon';
 
 // Firebase imports para actualizar datos y enviar correos de seguridad
 import { db } from '../firebaseTemp';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { getAuth, sendPasswordResetEmail } from 'firebase/auth';
 
 // --- Iconos extra necesarios ---
@@ -40,6 +40,31 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ player, onLogout, onAvata
 
     // Estado para notificaciones (Toast)
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+
+    // --- ESTADOS CONECTADOS DIRECTAMENTE A LA BASE DE DATOS ---
+    const [dbXp, setDbXp] = useState<number>(0);
+    const [dbPoints, setDbPoints] = useState<number>(0);
+    const [dbLevel, setDbLevel] = useState<number>(player?.level || 0);
+
+    // --- EFECTO PARA ESCUCHAR EN TIEMPO REAL LA BASE DE DATOS ---
+    useEffect(() => {
+        if (!player?.id && !player?.customerId) return;
+        
+        const userId = player.id || player.customerId;
+        const userRef = doc(db, 'customers', userId);
+        
+        // onSnapshot obtiene los valores reales al instante
+        const unsubscribe = onSnapshot(userRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                setDbXp(data.xp || 0);
+                setDbPoints(data.points || 0);
+                setDbLevel(data.level || 0);
+            }
+        });
+
+        return () => unsubscribe();
+    }, [player]);
 
     // --- Función de Notificaciones Rápidas ---
     const showToast = (message: string, type: 'success' | 'error') => {
@@ -119,8 +144,9 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ player, onLogout, onAvata
         }
     };
 
-    const requiredXp = getRequiredXpForLevel(player.level);
-    const percentage = Math.min(100, Math.round((player.xp / requiredXp) * 100));
+    // Calculamos el progreso basado EXCLUSIVAMENTE en dbXp (la base de datos)
+    const requiredXp = getRequiredXpForLevel(dbLevel);
+    const percentage = requiredXp > 0 ? Math.min(100, Math.round((dbXp / requiredXp) * 100)) : 100;
 
     // Determina si debemos mostrar la silueta por defecto (si no hay foto o es la de pravatar)
     const isDefaultAvatar = !player.avatarUrl || player.avatarUrl.includes('pravatar.cc');
@@ -210,7 +236,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ player, onLogout, onAvata
                 <div className="relative">
                     <div className="absolute inset-0 bg-emerald-500 rounded-full blur-xl opacity-20 animate-pulse"></div>
 
-                    {/* Contenedor del Avatar: Muestra la silueta de Instagram/FB o la foto real */}
+                    {/* Contenedor del Avatar: Muestra la silueta o la foto real */}
                     <div className="w-36 h-36 rounded-full border-[6px] border-[#F4F5F7] shadow-xl relative z-10 bg-gray-200 overflow-hidden flex items-end justify-center">
                         {isDefaultAvatar ? (
                             <svg className="w-[85%] h-[85%] text-white translate-y-[5%]" fill="currentColor" viewBox="0 0 24 24">
@@ -237,7 +263,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ player, onLogout, onAvata
                     </label>
 
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 bg-gradient-to-r from-[#e35212] to-[#ff7438] text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-full border-2 border-[#F4F5F7] shadow-md tracking-widest whitespace-nowrap">
-                        Nivel {player.level}
+                        Nivel {dbLevel}
                     </div>
                 </div>
 
@@ -255,24 +281,43 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ player, onLogout, onAvata
                     <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-[0.2em] mt-1">Piloto Oficial</p>
                 </div>
 
-                {/* --- TARJETA DE PROGRESO DE NIVEL --- */}
+                {/* --- TARJETA DE PUNTOS Y PROGRESO DE NIVEL --- */}
                 <div className="w-full bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100/50 relative overflow-hidden">
-                    <div className="flex justify-between items-end mb-3">
-                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Progreso de Nivel</span>
-                        <span className="text-sm font-black text-emerald-600">{percentage}%</span>
+                    
+                    {/* Header de Puntos y XP */}
+                    <div className="flex justify-between items-end mb-6">
+                        <div>
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] block mb-1">Mis Puntos</span>
+                            <span className="text-4xl font-black text-[#136A40] leading-none drop-shadow-sm">
+                                {/* Leemos estricta y puramente el campo 'points' de la BD */}
+                                {dbPoints.toLocaleString()}
+                            </span>
+                        </div>
+                        <div className="text-right">
+                            <span className="text-[10px] font-black text-[#e35212] uppercase tracking-[0.2em] block mb-1">Experiencia</span>
+                            <span className="text-xl font-bold text-gray-800 leading-none">
+                                {/* Leemos estricta y puramente el campo 'xp' de la BD */}
+                                {dbXp.toLocaleString()} <span className="text-xs text-gray-400">XP</span>
+                            </span>
+                        </div>
                     </div>
 
-                    <XPBar currentXp={player.xp} maxXp={requiredXp} />
+                    <div className="flex justify-between items-end mb-2">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Progreso al Nivel {dbLevel + 1}</span>
+                        <span className="text-xs font-black text-emerald-600">{percentage}%</span>
+                    </div>
 
-                    <div className="flex justify-between mt-3 text-[11px] text-gray-500 font-bold uppercase tracking-wider">
-                        <span>{player.xp.toLocaleString()} XP</span>
+                    <XPBar currentXp={dbXp} maxXp={requiredXp} />
+
+                    <div className="flex justify-between mt-2 text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                        <span>{dbXp.toLocaleString()} XP</span>
                         <span>Meta: {requiredXp.toLocaleString()} XP</span>
                     </div>
 
                     <div className="mt-5 pt-4 border-t border-gray-100 text-center">
                         <p className="text-xs text-gray-500 font-medium">
-                            {requiredXp - player.xp > 0 ? (
-                                <>¡Te faltan <span className="font-bold text-gray-900">{(requiredXp - player.xp).toLocaleString()} XP</span> para subir!</>
+                            {requiredXp - dbXp > 0 ? (
+                                <>¡Te faltan <span className="font-bold text-gray-900">{(requiredXp - dbXp).toLocaleString()} XP</span> para subir!</>
                             ) : (
                                 <span className="text-emerald-600 font-bold">¡Tienes experiencia suficiente para subir de nivel!</span>
                             )}
