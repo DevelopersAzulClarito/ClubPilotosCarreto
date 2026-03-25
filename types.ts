@@ -18,9 +18,12 @@ export interface PlayerProfile {
     email: string;
     age?: string;
     level: number;
-    xp: number; // La app usa 'xp', aunque la BD tenga 'points'
+    xp: number; 
     avatarUrl: string;
     authUid?: string;
+    // NUEVO: Agregamos los check-ins para que la app los reconozca
+    checkIns?: number;
+    visits?: number;
 }
 
 export interface CheckinResult {
