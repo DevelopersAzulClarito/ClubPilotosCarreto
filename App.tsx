@@ -24,6 +24,10 @@ import LevelsScreen from './components/screens/LevelsScreen';
 import ProfileScreen from './components/screens/ProfileScreen';
 import { GasPumpIcon } from './components/icons/GasPumpIcon';
 
+// --- NUEVO: IMPORTAMOS EL GANCHO DE NOTIFICACIONES PUSH ---
+import { usePushNotifications } from './components/usePushNotifications';
+
+
 const App: React.FC = () => {
     const [player, setPlayer] = useState<PlayerProfile | null>(null);
     const [appState, setAppState] = useState<AppState>(AppState.INTRO);
@@ -31,6 +35,10 @@ const App: React.FC = () => {
     
     // --- NUEVO ESTADO: Pantalla de Carga Inicial ---
     const [isCheckingSession, setIsCheckingSession] = useState(true);
+
+    // --- NUEVO: ACTIVAMOS LAS NOTIFICACIONES PUSH PARA ESTE USUARIO ---
+    // Si el jugador está logueado, le pasamos su ID para guardar su Token en la BD
+    usePushNotifications(player?.id || player?.customerId);
 
     // --- EFECTO 1: VERIFICAR SESIÓN ACTIVA AL ABRIR LA APP ---
     useEffect(() => {
