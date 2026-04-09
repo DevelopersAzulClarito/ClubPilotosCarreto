@@ -24,7 +24,7 @@ import LevelsScreen from './components/screens/LevelsScreen';
 import ProfileScreen from './components/screens/ProfileScreen';
 import { GasPumpIcon } from './components/icons/GasPumpIcon';
 
-// --- NUEVO: IMPORTAMOS EL GANCHO DE NOTIFICACIONES PUSH ---
+// 👇 NUEVO: Importamos el gancho de notificaciones Push (En segundo plano)
 import { usePushNotifications } from './components/usePushNotifications';
 
 
@@ -33,22 +33,20 @@ const App: React.FC = () => {
     const [appState, setAppState] = useState<AppState>(AppState.INTRO);
     const [activeTab, setActiveTab] = useState<ActiveTab>('home');
     
-    // --- NUEVO ESTADO: Pantalla de Carga Inicial ---
+    // --- ESTADO: Pantalla de Carga Inicial ---
     const [isCheckingSession, setIsCheckingSession] = useState(true);
 
-    // --- NUEVO: ACTIVAMOS LAS NOTIFICACIONES PUSH PARA ESTE USUARIO ---
-    // Si el jugador está logueado, le pasamos su ID para guardar su Token en la BD
+    // 👇 ACTIVAR PUSH NOTIFICATIONS AQUÍ 👇
+    // Esto pedirá permisos y guardará el token en Firebase automáticamente
     usePushNotifications(player?.id || player?.customerId);
 
     // --- EFECTO 1: VERIFICAR SESIÓN ACTIVA AL ABRIR LA APP ---
     useEffect(() => {
         const auth = getAuth();
         
-        // onAuthStateChanged detecta automáticamente si hay una sesión guardada en el celular
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser && firebaseUser.email) {
                 try {
-                    // Si hay sesión en el dispositivo, buscamos sus datos completos en la BD
                     const q = query(collection(db, 'customers'), where('email', '==', firebaseUser.email));
                     const snapshot = await getDocs(q);
                     
@@ -56,11 +54,9 @@ const App: React.FC = () => {
                         const userData = snapshot.docs[0].data() as PlayerProfile;
                         userData.id = snapshot.docs[0].id;
                         
-                        // Guardamos al jugador y lo mandamos DIRECTO al Dashboard
                         setPlayer(userData);
                         setAppState(AppState.DASHBOARD);
                     } else {
-                        // Falla de seguridad o cuenta borrada
                         setAppState(AppState.INTRO);
                     }
                 } catch (error) {
@@ -68,15 +64,12 @@ const App: React.FC = () => {
                     setAppState(AppState.INTRO);
                 }
             } else {
-                // Si no hay sesión guardada, forzamos a que inicie sesión o vea la intro
                 setAppState(prev => prev !== AppState.AUTH ? AppState.INTRO : AppState.AUTH);
             }
             
-            // Ocultamos la pantalla de carga elegante
             setIsCheckingSession(false);
         });
 
-        // Limpieza del listener cuando la app se cierra
         return () => unsubscribe();
     }, []);
 
@@ -129,9 +122,9 @@ const App: React.FC = () => {
 
     // --- LOGOUT ---
     const handleLogout = async () => {
-        await logoutFirebase(); // Esto borra la sesión del dispositivo
+        await logoutFirebase(); 
         setPlayer(null);
-        setAppState(AppState.AUTH); // Mandamos directo a la pantalla de Auth, no a la Intro
+        setAppState(AppState.AUTH); 
         setActiveTab('home');
     };
 
@@ -145,18 +138,15 @@ const App: React.FC = () => {
         return (
             <div className="min-h-screen bg-white flex justify-center">
                 <div className="w-full max-w-sm bg-[#F4F5F7] min-h-screen shadow-2xl flex flex-col items-center justify-center relative overflow-hidden">
-                    {/* Efectos de iluminación de fondo */}
                     <div className="absolute top-0 right-0 w-64 h-64 bg-orange-400 opacity-20 blur-[80px] rounded-full pointer-events-none"></div>
                     <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-500 opacity-20 blur-[80px] rounded-full pointer-events-none"></div>
 
-                    {/* Logo animado */}
                     <div className="bg-white p-6 rounded-[2.5rem] shadow-[0_20px_50px_rgba(227,82,18,0.15)] mb-8 animate-bounce relative z-10">
                         <GasPumpIcon className="w-20 h-20 text-[#e35212]" />
                     </div>
                     
                     <h1 className="font-black text-gray-900 text-3xl tracking-[0.15em] uppercase mb-4 relative z-10">Club Pilotos</h1>
                     
-                    {/* Indicador de carga premium */}
                     <div className="flex items-center gap-3 bg-white/70 backdrop-blur-md px-6 py-3.5 rounded-full border border-gray-200 shadow-sm relative z-10">
                         <div className="w-5 h-5 border-[3px] border-[#e35212] border-t-transparent rounded-full animate-spin"></div>
                         <p className="text-gray-700 font-extrabold text-sm tracking-widest uppercase">Iniciando motor...</p>
