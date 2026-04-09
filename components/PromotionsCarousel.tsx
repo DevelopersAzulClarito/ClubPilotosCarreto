@@ -6,16 +6,22 @@ interface PromotionsCarouselProps {
 }
 
 const PromotionsCarousel: React.FC<PromotionsCarouselProps> = ({ promotions }) => {
+    // Detectamos si solo hay 1 promoción activa
+    const isSingle = promotions.length === 1;
+
     return (
-        // Contenedor con scroll horizontal, ocultando la barra nativa y forzando el "snap" (imán)
-        <div className="flex overflow-x-auto space-x-4 pb-6 -mx-6 px-6 scrollbar-hide snap-x snap-mandatory">
+        // Si es 1, usamos justify-center puro. Si son varias, activamos el scroll horizontal.
+        <div className={`flex pb-6 ${
+            isSingle 
+                ? 'justify-center w-full' 
+                : 'overflow-x-auto space-x-4 -mx-6 px-6 scrollbar-hide snap-x snap-mandatory'
+        }`}>
             {promotions.map(promo => (
                 <div 
                     key={promo.id} 
-                    // Diseño Mobile-First: 
-                    // 1. w-[85vw] hace que ocupe el 85% de la pantalla (deja asomar la siguiente promo).
-                    // 2. active:scale-[0.98] da ese efecto de "botón presionado" cuando el usuario lo toca.
-                    className="snap-center flex-shrink-0 w-[85vw] max-w-[320px] h-48 rounded-2xl overflow-hidden relative shadow-md bg-gray-100 dark:bg-gray-800 transition-transform duration-200 ease-out active:scale-[0.98]"
+                    className={`flex-shrink-0 w-[85vw] max-w-[320px] h-48 rounded-2xl overflow-hidden relative shadow-md bg-gray-100 dark:bg-gray-800 transition-transform duration-200 ease-out active:scale-[0.98] ${
+                        !isSingle ? 'snap-center' : '' // Solo forzamos el imán si hay más de 1
+                    }`}
                 >
                     {/* Imagen de fondo de la promoción */}
                     <img 

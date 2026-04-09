@@ -17,18 +17,14 @@ import {
 } from 'firebase/firestore';
 import { PlayerProfile } from '../types';
 
-const USERS_COLLECTION = 'customers'; // Tu colección real en Firestore
+const USERS_COLLECTION = 'customers'; 
 
 // --- LOGIN INTELIGENTE (CORREO O TELÉFONO) ---
 export const loginWithIdentifier = async (identifier: string, password: string): Promise<PlayerProfile> => {
     let emailToUse = identifier.trim();
 
-    // 1. Si no tiene arroba, asumimos que es un TELÉFONO
     if (!identifier.includes('@')) {
         const cleanPhone = identifier.replace(/\D/g, '').trim();
-        console.log(`Intentando login con teléfono: ${cleanPhone}`);
-
-        // Buscamos el correo asociado a ese teléfono en Firestore
         const q = query(collection(db, USERS_COLLECTION), where("phone", "==", cleanPhone));
         const snapshot = await getDocs(q);
 
@@ -37,18 +33,14 @@ export const loginWithIdentifier = async (identifier: string, password: string):
         }
 
         const userDoc = snapshot.docs[0].data();
-        
         if (!userDoc.email) {
             throw new Error("Tu cuenta existe pero no está vinculada a un correo/contraseña. Por favor ve a 'Registrarme' para activarla.");
         }
-
-        emailToUse = userDoc.email; // Usamos el correo encontrado
+        emailToUse = userDoc.email; 
     }
 
-    // 2. Autenticación oficial con Firebase Auth
     await signInWithEmailAndPassword(auth, emailToUse, password);
 
-    // 3. Descargar perfil completo
     const q = query(collection(db, USERS_COLLECTION), where("email", "==", emailToUse));
     const querySnapshot = await getDocs(q);
 
@@ -65,7 +57,6 @@ export const loginWithIdentifier = async (identifier: string, password: string):
             xp: data.points ?? 0, 
             level: data.level ?? 0, 
             avatarUrl: data.avatarUrl || `https://i.pravatar.cc/150?u=${data.phone}`,
-            // NUEVO: Extraemos los check-ins de la BD
             checkIns: data.checkIns || data.visits || 0,
             visits: data.visits || data.checkIns || 0
         } as PlayerProfile;
@@ -77,18 +68,13 @@ export const loginWithIdentifier = async (identifier: string, password: string):
 // --- REGISTRO CON VINCULACIÓN DE PUNTOS ---
 export const registerWithEmail = async (userData: { email: string; password: string; phone: string; name: string; age: string }) => {
     const cleanPhone = userData.phone.replace(/\D/g, '').trim();
-
-    // 1. Crear usuario en Auth
     const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
     const uid = userCredential.user.uid;
 
-    // 2. Buscar si ya existe el teléfono en Firestore (Cuentas viejas)
     const q = query(collection(db, USERS_COLLECTION), where("phone", "==", cleanPhone));
     const snapshot = await getDocs(q);
 
     if (!snapshot.empty) {
-        // CASO A: YA EXISTÍA -> ACTUALIZAMOS (Vinculación)
-        console.log("Cuenta existente encontrada. Vinculando...");
         const existingDoc = snapshot.docs[0];
         const userRef = doc(db, USERS_COLLECTION, existingDoc.id);
 
@@ -97,7 +83,6 @@ export const registerWithEmail = async (userData: { email: string; password: str
             authUid: uid,
             name: userData.name, 
             age: userData.age
-            // NO tocamos 'points' ni 'level', así conserva su progreso
         });
 
         const data = existingDoc.data();
@@ -107,14 +92,11 @@ export const registerWithEmail = async (userData: { email: string; password: str
             xp: data.points ?? 0,
             level: data.level ?? 0,
             avatarUrl: data.avatarUrl || `https://i.pravatar.cc/150?u=${cleanPhone}`,
-            // NUEVO: Extraemos los check-ins de la BD
             checkIns: data.checkIns || data.visits || 0,
             visits: data.visits || data.checkIns || 0
         } as PlayerProfile;
 
     } else {
-        // CASO B: USUARIO NUEVO -> CREAMOS
-        console.log("Usuario nuevo. Creando...");
         const newDocRef = await addDoc(collection(db, USERS_COLLECTION), {
             name: userData.name,
             phone: cleanPhone,
@@ -122,7 +104,7 @@ export const registerWithEmail = async (userData: { email: string; password: str
             age: userData.age,
             points: 0,
             level: 0,
-            checkIns: 0, // Los nuevos usuarios empiezan con 0 check-ins
+            checkIns: 0, 
             visits: 0,
             authUid: uid,
             createdAt: new Date().toISOString()
@@ -143,17 +125,18 @@ export const registerWithEmail = async (userData: { email: string; password: str
     }
 };
 
-// --- SUSCRIPCIÓN EN TIEMPO REAL ---
+// --- SUSCRIPCIÓN EN TIEMPO REAL (SIN NOTIFICACIONES LOCALES) ---
 export const subscribeToUser = (email: string, callback: (user: PlayerProfile) => void) => {
     const q = query(collection(db, USERS_COLLECTION), where("email", "==", email));
     
     getDocs(q).then(snapshot => {
         if (!snapshot.empty) {
             const docId = snapshot.docs[0].id;
-            // Escuchamos cambios en ese documento específico
+            
             return onSnapshot(doc(db, USERS_COLLECTION, docId), (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
+                    
                     callback({
                         id: docSnap.id,
                         customerId: data.customerId || docSnap.id,
@@ -163,9 +146,8 @@ export const subscribeToUser = (email: string, callback: (user: PlayerProfile) =
                         xp: data.points ?? 0,
                         level: data.level ?? 0,
                         avatarUrl: data.avatarUrl || `https://i.pravatar.cc/150?u=${data.phone}`,
-                        // NUEVO: Actualización en vivo de los check-ins
-                        checkIns: data.checkIns || data.visits || 0,
-                        visits: data.visits || data.checkIns || 0
+                        checkIns: data.checkIns ?? data.visits ?? 0,
+                        visits: data.checkIns ?? data.visits ?? 0
                     } as PlayerProfile);
                 }
             });
