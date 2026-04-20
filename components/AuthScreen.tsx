@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { UserIcon } from './icons/UserIcon'; 
+import { CarretoPlusIcon } from './Icons'; // <-- Importamos el logo
 import TermsModal from './TermsModal';
 import PrivacyModal from './PrivacyModal';
 import { resetPasswordWithIdentifier } from '../services/userService';
@@ -115,7 +116,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onRegister }) => {
             await onRegister({ name: rName, phone: rPhone, email: rEmail, password: rPass, age: rAge });
         } catch (error: any) {
             let msg = error.message || "Error al intentar registrarse.";
-            if (msg.includes("email-already-in-use")) {
+            if (msg.includes("email-already-in-use") || msg.includes("El correo ya está registrado")) {
                 msg = "Este correo ya está registrado en otra cuenta.";
             }
             setErrorMsg(msg);
@@ -151,9 +152,10 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onRegister }) => {
         } catch (error: any) {
             let msg = error.message || "Error al iniciar sesión.";
             
+            // Traducción de los errores para el cuadro rojo
             if (msg.includes("Este número no está registrado") || msg.includes("user-not-found")) {
                 msg = "Este número o correo no está registrado. Ve a la pestaña 'Registrarme' para crear tu cuenta.";
-            } else if (msg.includes("invalid-credential") || msg.includes("wrong-password")) {
+            } else if (msg.includes("invalid-credential") || msg.includes("wrong-password") || msg.includes("Credenciales incorrectas")) {
                 msg = "La contraseña es incorrecta o los datos no coinciden.";
             } else if (msg.includes("too-many-requests")) {
                 msg = "Demasiados intentos fallidos. Por seguridad, intenta de nuevo más tarde.";
@@ -168,7 +170,23 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onRegister }) => {
     return (
         <div className="flex flex-col h-full p-6 justify-center">
             
-            <div className="text-center mb-8">
+            <div className="text-center mb-8 flex flex-col items-center">
+                
+                {/* --- CONTENEDOR DEL LOGO PREMIUM --- */}
+                <div className="relative mb-8 group animate-fade-in-up">
+                    {/* Aura mágica de colores de fondo */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#e35212] to-emerald-500 rounded-[2.5rem] blur-[20px] opacity-20 group-hover:opacity-40 transition-opacity duration-700"></div>
+                    
+                    {/* Marco esmerilado elegante */}
+                    <div className="relative bg-white/80 backdrop-blur-xl p-2.5 rounded-[2rem] shadow-[0_20px_40px_rgba(0,0,0,0.08)] border border-white flex items-center justify-center">
+                        <img 
+                            src="/icons/icon-192.webp" 
+                            alt="Logo Carreto" 
+                            className="w-24 h-24 sm:w-28 sm:h-28 rounded-[1.3rem] object-cover shadow-inner transition-transform duration-700 ease-out group-hover:scale-105" 
+                        />
+                    </div>
+                </div>
+
                 <h2 className="text-3xl font-black text-gray-900 tracking-tight mb-2">
                     {isLogin ? '¡Hola de nuevo!' : 'Únete al Club'}
                 </h2>
@@ -204,8 +222,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onRegister }) => {
                 </button>
             </div>
 
+            {/* CUADRO ROJO DE ERRORES */}
             {errorMsg && (
-                <div className="mb-6 bg-red-50 border border-red-200 p-4 rounded-xl flex items-start gap-3 animate-fade-in">
+                <div className="mb-6 bg-red-50 border border-red-200 p-4 rounded-xl flex items-start gap-3 animate-fade-in shadow-sm">
                     <svg className="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
