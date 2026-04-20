@@ -180,7 +180,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onRegister }) => {
                     {/* Marco esmerilado elegante */}
                     <div className="relative bg-white/80 backdrop-blur-xl p-2.5 rounded-[2rem] shadow-[0_20px_40px_rgba(0,0,0,0.08)] border border-white flex items-center justify-center">
                         <img 
-                            src="/icons/icon-192.webp" 
+                            src="icons/icon-192.webp" 
                             alt="Logo Carreto" 
                             className="w-24 h-24 sm:w-28 sm:h-28 rounded-[1.3rem] object-cover shadow-inner transition-transform duration-700 ease-out group-hover:scale-105" 
                         />

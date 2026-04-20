@@ -144,7 +144,7 @@ const App: React.FC = () => {
 
                     <div className="bg-white p-4 rounded-[2rem] shadow-[0_20px_50px_rgba(227,82,18,0.15)] mb-8 animate-bounce relative z-10 border border-gray-100">
                         <img 
-                            src="/icons/icon-512.webp" 
+                            src="icons/icon-512.webp" 
                             alt="Logo Carreto" 
                             className="w-20 h-20 rounded-2xl object-cover" 
                         />
@@ -194,7 +194,7 @@ const App: React.FC = () => {
                         <div className="relative shrink-0">
                             <div className="absolute inset-0 bg-orange-500 rounded-xl blur-md opacity-30"></div>
                             <img 
-                                src="/icons/icon-72.webp" 
+                                src="icons/icon-72.webp" 
                                 alt="Logo Carreto" 
                                 className="relative w-11 h-11 rounded-xl shadow-sm object-cover border border-gray-200/50 bg-white" 
                             />
