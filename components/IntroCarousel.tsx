@@ -18,7 +18,7 @@ const ElegantLogo = () => (
         <div className="relative w-full h-full bg-white/80 backdrop-blur-2xl p-3.5 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-white flex items-center justify-center transform transition-transform duration-700 ease-out hover:scale-105">
             {/* Usamos el ícono grande para que se vea ultra nítido */}
             <img 
-                src="/icons/icon-256.webp" 
+                src="icons/icon-256.webp" 
                 alt="Logo Club Pilotos Carreto" 
                 className="w-full h-full rounded-[1.8rem] object-cover shadow-inner" 
             />
