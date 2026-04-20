@@ -103,9 +103,12 @@ const NavItem: React.FC<{
 
 const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab }) => {
     return (
-        // Contenedor principal con Safe Area para iPhones y esquinas redondeadas
-        <div className="fixed bottom-0 left-0 right-0 max-w-sm mx-auto bg-white shadow-[0_-4px_25px_rgba(0,0,0,0.06)] rounded-t-[2rem] z-50 pb-[env(safe-area-inset-bottom)]">
-            
+        // Contenedor principal convertido en barra FLOTANTE (Floating Nav)
+        <div 
+            className="fixed left-0 right-0 w-[94%] max-w-sm mx-auto bg-white shadow-[0_8px_30px_rgba(0,0,0,0.12)] rounded-[2rem] z-50 transition-all duration-300"
+            // Se calcula 1rem (16px) de separación desde el borde, más el espacio seguro del iPhone
+            style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
+        >
             {/* Contenedor de los botones */}
             <div className="flex items-center justify-around h-[4.5rem] px-2 relative">
                <NavItem 

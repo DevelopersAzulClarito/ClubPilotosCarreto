@@ -22,7 +22,6 @@ import QRScreen from './components/screens/QRScreen';
 import StoreScreen from './components/screens/StoreScreen';
 import LevelsScreen from './components/screens/LevelsScreen'; 
 import ProfileScreen from './components/screens/ProfileScreen';
-import { GasPumpIcon } from './components/icons/GasPumpIcon';
 
 // 👇 NUEVO: Importamos el gancho de notificaciones Push (En segundo plano)
 import { usePushNotifications } from './components/usePushNotifications';
@@ -100,7 +99,8 @@ const App: React.FC = () => {
             if (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password') {
                 msg = "Credenciales incorrectas.";
             }
-            alert("Error: " + msg);
+            // AQUÍ ESTABA EL ALERT. Ahora lo mandamos como error para que AuthScreen lo atrape.
+            throw new Error(msg);
         }
     };
 
@@ -112,11 +112,12 @@ const App: React.FC = () => {
             setAppState(AppState.PROFILING);
         } catch (e: any) {
             console.error(e);
+            let msg = e.message;
             if (e.code === 'auth/email-already-in-use') {
-                alert("El correo ya está registrado.");
-            } else {
-                alert("Error: " + e.message);
+                msg = "El correo ya está registrado.";
             }
+            // AQUÍ ESTABA EL ALERT. Ahora lo mandamos como error para que AuthScreen lo atrape.
+            throw new Error(msg);
         }
     };
 
@@ -141,8 +142,12 @@ const App: React.FC = () => {
                     <div className="absolute top-0 right-0 w-64 h-64 bg-orange-400 opacity-20 blur-[80px] rounded-full pointer-events-none"></div>
                     <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-500 opacity-20 blur-[80px] rounded-full pointer-events-none"></div>
 
-                    <div className="bg-white p-6 rounded-[2.5rem] shadow-[0_20px_50px_rgba(227,82,18,0.15)] mb-8 animate-bounce relative z-10">
-                        <GasPumpIcon className="w-20 h-20 text-[#e35212]" />
+                    <div className="bg-white p-4 rounded-[2rem] shadow-[0_20px_50px_rgba(227,82,18,0.15)] mb-8 animate-bounce relative z-10 border border-gray-100">
+                        <img 
+                            src="/icons/icon-512.webp" 
+                            alt="Logo Carreto" 
+                            className="w-20 h-20 rounded-2xl object-cover" 
+                        />
                     </div>
                     
                     <h1 className="font-black text-gray-900 text-3xl tracking-[0.15em] uppercase mb-4 relative z-10">Club Pilotos</h1>
@@ -180,15 +185,28 @@ const App: React.FC = () => {
     return (
         <div className="min-h-screen bg-white flex justify-center">
             <div className="w-full max-w-sm bg-white min-h-screen shadow-2xl relative flex flex-col">
+                 
+                 {/* CABECERA (HEADER) MEJORADA */}
                  {appState === AppState.DASHBOARD && activeTab !== 'qr' && (
-                    <header className="px-6 py-4 flex items-center gap-3 border-b border-gray-100 bg-white sticky top-0 z-50 flex-shrink-0 w-full">
-                        <GasPumpIcon className="w-8 h-8 text-[#e35212] flex-shrink-0" />
+                    <header className="px-5 py-4 flex items-center gap-3.5 border-b border-gray-100 bg-white/90 backdrop-blur-md sticky top-0 z-50 flex-shrink-0 w-full">
+                        
+                        {/* Contenedor del Logo con resplandor naranja */}
+                        <div className="relative shrink-0">
+                            <div className="absolute inset-0 bg-orange-500 rounded-xl blur-md opacity-30"></div>
+                            <img 
+                                src="/icons/icon-72.webp" 
+                                alt="Logo Carreto" 
+                                className="relative w-11 h-11 rounded-xl shadow-sm object-cover border border-gray-200/50 bg-white" 
+                            />
+                        </div>
+
                         <div className="min-w-0 flex-1">
-                            <h1 className="font-bold text-gray-900 text-lg leading-tight truncate">Club Pilotos</h1>
-                            <p className="text-xs text-gray-500 truncate">Carreto Gas</p>
+                            <h1 className="font-black text-gray-900 text-lg leading-tight tracking-tight truncate">Club Pilotos</h1>
+                            <p className="text-[10px] font-bold text-[#136A40] uppercase tracking-[0.15em] truncate mt-0.5">Carreto Gas</p>
                         </div>
                     </header>
                  )}
+
                  {renderContent()}
             </div>
         </div>
