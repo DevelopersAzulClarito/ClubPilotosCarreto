@@ -90,9 +90,7 @@ const QRScreen: React.FC<QRScreenProps> = ({ player, setActiveTab }) => {
                             />
                         </div>
                         
-                        <p className="text-[10px] font-bold text-gray-300 mt-4 tracking-widest uppercase">
-                            ID: {player.id?.substring(0,8) || player.customerId?.substring(0,8)}
-                        </p>
+                      
                     </div>
 
                     {/* PARTE INFERIOR: Estadísticas Rápidas */}
