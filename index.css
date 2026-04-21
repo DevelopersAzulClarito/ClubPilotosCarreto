@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #ffffff;
+}
+
+/* Ocultar scrollbar horizontal en el carrusel de promociones */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Animación de entrada para modales tipo bottom-sheet */
+@keyframes slideUpSheet {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.anim-bottom-sheet {
+  animation: slideUpSheet 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}

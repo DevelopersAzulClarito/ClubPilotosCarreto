@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─────────────────────────────────────────────────────────────────
+    // COLECCIONES DE SOLO LECTURA (contenido administrado)
+    // Ningún cliente puede escribir promociones ni configuración de niveles.
+    // ─────────────────────────────────────────────────────────────────
+    match /promotions/{docId} {
+      allow read:  if request.auth != null;
+      allow write: if false;
+    }
+
+    match /levels/{docId} {
+      allow read:  if request.auth != null;
+      allow write: if false;
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // COLECCIÓN DE CLIENTES
+    // Un usuario solo puede leer y editar su PROPIO documento.
+    // Los campos de juego sensibles (points, xp, level) son INMUTABLES
+    // desde el cliente — solo pueden modificarse vía Cloud Functions o
+    // el panel admin con credenciales de servicio.
+    // ─────────────────────────────────────────────────────────────────
+    match /customers/{docId} {
+
+      // Lectura: solo si el uid de Firebase Auth coincide con authUid del doc.
+      // NOTA: las queries por phone/email antes del login requieren un
+      // Cloud Function o un índice público limitado. Para esta versión
+      // se permite leer a cualquier usuario autenticado; migrar a UID
+      // como ID de documento en la siguiente iteración elimina esta concesión.
+      allow read: if request.auth != null;
+
+      // Creación: solo durante el registro, el uid debe coincidir con authUid.
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.authUid;
+
+      // Actualización: el usuario solo puede editar su propio documento
+      // y NUNCA puede tocar points, xp ni level (campos de juego).
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.authUid
+        && !request.resource.data.diff(resource.data)
+              .affectedKeys()
+              .hasAny(['points', 'xp', 'level']);
+
+      // Eliminación: solo el propio usuario puede borrar su cuenta.
+      allow delete: if request.auth != null
+        && request.auth.uid == resource.data.authUid;
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Cualquier otra colección no listada: acceso denegado.
+    // ─────────────────────────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

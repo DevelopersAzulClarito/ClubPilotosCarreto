@@ -52,7 +52,7 @@ const StoreScreen: React.FC = () => {
             ) : (
                 // Grid de Productos Reales
                 <div className="grid grid-cols-2 gap-4">
-                    {products.map((product: any) => (
+                    {products.map((product) => (
                         <div key={product.id} className="bg-white border border-gray-100/80 rounded-3xl overflow-hidden shadow-[0_8px_20px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_25px_rgb(0,0,0,0.08)] transition-all duration-300 flex flex-col group relative">
                             
                             {/* Imagen y Tags */}
@@ -85,7 +85,7 @@ const StoreScreen: React.FC = () => {
                                 
                                 <div className="mt-4 pt-3 border-t border-gray-100/60 flex flex-col gap-1.5">
                                     {/* Mostrar puntos solo si el producto los tiene configurados (> 0) */}
-                                    {product.points > 0 && (
+                                    {(product.points ?? 0) > 0 && (
                                         <div className="flex justify-between items-center">
                                             <span className="text-[10px] text-amber-500 font-black uppercase tracking-wider">Puntos</span>
                                             <span className="font-black text-amber-600 text-sm">{product.points} Pts</span>
