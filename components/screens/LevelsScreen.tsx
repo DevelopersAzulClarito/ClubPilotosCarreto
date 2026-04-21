@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { PlayerProfile, Reward, ActiveTab } from '../../types';
+import { PlayerProfile, type Level } from '../../types';
 import { db } from '../firebaseTemp';
-import { collection, getDocs, query, orderBy, doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { getRequiredXpForLevel } from '../../constants'; // Usamos la nueva función de XP
 import XPBar from '../XPBar';
 import WinnerScreen from '../WinnerScreen'; // Importamos la animación de celebración
@@ -35,7 +35,7 @@ interface LevelsScreenProps {
 }
 
 const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) => {
-    const [levels, setLevels] = useState<any[]>([]);
+    const [levels, setLevels] = useState<Level[]>([]);
     const [loading, setLoading] = useState(true);
     const [isLevelingUp, setIsLevelingUp] = useState(false);
     
@@ -55,7 +55,7 @@ const LevelsScreen: React.FC<LevelsScreenProps> = ({ player, onPlayerUpdate }) =
     useEffect(() => {
         const fetchLevels = async () => {
             try {
-                const q = query(collection(db, "levels"), orderBy("level", "asc"));
+                const q = query(collection(db, "levels"), orderBy("level", "asc"), limit(50));
                 const snapshot = await getDocs(q);
                 const levelsData = snapshot.docs.map(doc => ({
                     id: doc.id, // Guardamos el ID para poder filtrarlo

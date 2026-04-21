@@ -18,10 +18,9 @@ export interface PlayerProfile {
     email: string;
     age?: string;
     level: number;
-    xp: number; 
+    xp: number;
     avatarUrl: string;
     authUid?: string;
-    // NUEVO: Agregamos los check-ins para que la app los reconozca
     checkIns?: number;
     visits?: number;
 }
@@ -37,10 +36,11 @@ export interface Product {
     id: string;
     name: string;
     price: number;
+    points?: number;
     isActive?: boolean;
     department?: string;
     barcode?: string;
-    imageUrl?: string; 
+    imageUrl?: string;
     nameLowercase?: string;
 }
 
@@ -50,21 +50,34 @@ export interface Promotion {
     description: string;
     imageUrl: string;
     isActive: boolean;
-    validUntil: any;
+    validUntil: string | null;
 }
 
-// Interfaz para la configuración de niveles en el Panel Admin
 export interface LevelConfig {
-    id: string; 
+    id: string;
     name: string;
     minPoints: number;
     rewardDescription: string;
     color: string;
 }
 
-// Interfaz para mostrar los premios en la App del cliente (Dashboard y LevelRewards)
 export interface Reward {
     level: number;
     name: string;
     description: string;
+}
+
+export interface Level {
+    id: string;
+    level: number;
+    name: string;
+    description: string;
+}
+
+export interface RegisterInfo {
+    name: string;
+    phone: string;
+    email: string;
+    password: string;
+    age: string;
 }

@@ -8,7 +8,7 @@ import { getRequiredXpForLevel } from '../constants'; // Usamos la función de X
 
 import { motivationalPhrases } from './FrasesM'; 
 import { db } from '../components/firebaseTemp'; 
-import { collection, getDocs, query, orderBy, doc, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, doc, onSnapshot } from 'firebase/firestore';
 
 interface DashboardProps {
     player: PlayerProfile;
@@ -58,7 +58,7 @@ const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) =>
     useEffect(() => {
         const fetchPromotions = async () => {
             try {
-                const q = query(collection(db, "promotions"));
+                const q = query(collection(db, "promotions"), limit(10));
                 const snapshot = await getDocs(q);
                 
                 const today = new Date();
@@ -89,7 +89,7 @@ const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) =>
 
         const fetchRewards = async () => {
             try {
-                const q = query(collection(db, "levels"), orderBy("level", "asc"));
+                const q = query(collection(db, "levels"), orderBy("level", "asc"), limit(20));
                 const snapshot = await getDocs(q);
                 
                 const rewardsData = snapshot.docs.map(doc => {
@@ -173,7 +173,7 @@ const Dashboard: React.FC<DashboardProps> = ({ player, setActiveTab, error }) =>
                 {/* Botón de Acción Principal */}
                 <div className="pt-2">
                     <button
-                        onClick={() => setActiveTab(hasEnoughXp ? 'levels' : 'qr')} 
+                        onClick={() => setActiveTab(hasEnoughXp ? 'prizes' : 'qr')}
                         className={`w-full flex items-center justify-center gap-3 text-white font-black py-4 px-6 rounded-[1.5rem] text-lg transition-transform duration-200 active:scale-[0.97] shadow-xl ${
                             hasEnoughXp 
                             ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-500/30 animate-pulse border border-emerald-400/50' 

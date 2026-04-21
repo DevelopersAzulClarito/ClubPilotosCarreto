@@ -5,15 +5,16 @@ import {
     signOut,
     sendPasswordResetEmail
 } from 'firebase/auth';
-import { 
-    collection, 
-    query, 
-    where, 
-    getDocs, 
-    addDoc, 
-    updateDoc, 
-    doc, 
-    onSnapshot 
+import {
+    collection,
+    query,
+    where,
+    limit,
+    getDocs,
+    addDoc,
+    updateDoc,
+    doc,
+    onSnapshot
 } from 'firebase/firestore';
 import { PlayerProfile } from '../types';
 
@@ -25,7 +26,7 @@ export const loginWithIdentifier = async (identifier: string, password: string):
 
     if (!identifier.includes('@')) {
         const cleanPhone = identifier.replace(/\D/g, '').trim();
-        const q = query(collection(db, USERS_COLLECTION), where("phone", "==", cleanPhone));
+        const q = query(collection(db, USERS_COLLECTION), where("phone", "==", cleanPhone), limit(1));
         const snapshot = await getDocs(q);
 
         if (snapshot.empty) {
@@ -41,7 +42,7 @@ export const loginWithIdentifier = async (identifier: string, password: string):
 
     await signInWithEmailAndPassword(auth, emailToUse, password);
 
-    const q = query(collection(db, USERS_COLLECTION), where("email", "==", emailToUse));
+    const q = query(collection(db, USERS_COLLECTION), where("email", "==", emailToUse), limit(1));
     const querySnapshot = await getDocs(q);
 
     if (!querySnapshot.empty) {
@@ -126,33 +127,38 @@ export const registerWithEmail = async (userData: { email: string; password: str
 };
 
 // --- SUSCRIPCIÓN EN TIEMPO REAL (SIN NOTIFICACIONES LOCALES) ---
-export const subscribeToUser = (email: string, callback: (user: PlayerProfile) => void) => {
-    const q = query(collection(db, USERS_COLLECTION), where("email", "==", email));
-    
+export const subscribeToUser = (email: string, callback: (user: PlayerProfile) => void): () => void => {
+    let cancelSnapshot: (() => void) | null = null;
+    let cancelled = false;
+
+    const q = query(collection(db, USERS_COLLECTION), where("email", "==", email), limit(1));
+
     getDocs(q).then(snapshot => {
-        if (!snapshot.empty) {
-            const docId = snapshot.docs[0].id;
-            
-            return onSnapshot(doc(db, USERS_COLLECTION, docId), (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    
-                    callback({
-                        id: docSnap.id,
-                        customerId: data.customerId || docSnap.id,
-                        name: data.name,
-                        phone: data.phone,
-                        email: data.email,
-                        xp: data.points ?? 0,
-                        level: data.level ?? 0,
-                        avatarUrl: data.avatarUrl || `https://i.pravatar.cc/150?u=${data.phone}`,
-                        checkIns: data.checkIns ?? data.visits ?? 0,
-                        visits: data.checkIns ?? data.visits ?? 0
-                    } as PlayerProfile);
-                }
-            });
-        }
+        if (cancelled || snapshot.empty) return;
+
+        const docId = snapshot.docs[0].id;
+        cancelSnapshot = onSnapshot(doc(db, USERS_COLLECTION, docId), (docSnap) => {
+            if (cancelled || !docSnap.exists()) return;
+            const data = docSnap.data();
+            callback({
+                id: docSnap.id,
+                customerId: data.customerId || docSnap.id,
+                name: data.name,
+                phone: data.phone,
+                email: data.email,
+                xp: data.points ?? 0,
+                level: data.level ?? 0,
+                avatarUrl: data.avatarUrl || `https://i.pravatar.cc/150?u=${data.phone}`,
+                checkIns: data.checkIns ?? data.visits ?? 0,
+                visits: data.checkIns ?? data.visits ?? 0
+            } as PlayerProfile);
+        });
     });
+
+    return () => {
+        cancelled = true;
+        if (cancelSnapshot) cancelSnapshot();
+    };
 };
 
 // --- ACTUALIZAR PUNTOS ---
@@ -175,7 +181,7 @@ export const resetPasswordWithIdentifier = async (identifier: string): Promise<v
 
     if (!identifier.includes('@')) {
         const cleanPhone = identifier.replace(/\D/g, '').trim();
-        const q = query(collection(db, USERS_COLLECTION), where("phone", "==", cleanPhone));
+        const q = query(collection(db, USERS_COLLECTION), where("phone", "==", cleanPhone), limit(1));
         const snapshot = await getDocs(q);
 
         if (snapshot.empty) {
