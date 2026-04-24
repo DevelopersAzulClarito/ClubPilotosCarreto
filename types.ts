@@ -23,6 +23,7 @@ export interface PlayerProfile {
     authUid?: string;
     checkIns?: number;
     visits?: number;
+    hasAcceptedTerms?: boolean;
 }
 
 export interface CheckinResult {
@@ -37,6 +38,7 @@ export interface Product {
     name: string;
     price: number;
     points?: number;
+    stock?: number;
     isActive?: boolean;
     department?: string;
     barcode?: string;

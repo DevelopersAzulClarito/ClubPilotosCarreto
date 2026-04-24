@@ -55,11 +55,12 @@ export const loginWithIdentifier = async (identifier: string, password: string):
             name: data.name,
             phone: data.phone,
             email: data.email,
-            xp: data.points ?? 0, 
-            level: data.level ?? 0, 
+            xp: data.points ?? 0,
+            level: data.level ?? 0,
             avatarUrl: data.avatarUrl || `https://i.pravatar.cc/150?u=${data.phone}`,
             checkIns: data.checkIns || data.visits || 0,
-            visits: data.visits || data.checkIns || 0
+            visits: data.visits || data.checkIns || 0,
+            hasAcceptedTerms: data.hasAcceptedTerms ?? false,
         } as PlayerProfile;
     } else {
         throw new Error("Login exitoso pero no se encontró perfil en base de datos.");
@@ -105,12 +106,13 @@ export const registerWithEmail = async (userData: { email: string; password: str
             age: userData.age,
             points: 0,
             level: 0,
-            checkIns: 0, 
+            checkIns: 0,
             visits: 0,
             authUid: uid,
+            hasAcceptedTerms: false,
             createdAt: new Date().toISOString()
         });
-        
+
         return {
             id: newDocRef.id,
             customerId: newDocRef.id,
@@ -121,7 +123,8 @@ export const registerWithEmail = async (userData: { email: string; password: str
             level: 0,
             checkIns: 0,
             visits: 0,
-            avatarUrl: `https://i.pravatar.cc/150?u=${cleanPhone}`
+            avatarUrl: `https://i.pravatar.cc/150?u=${cleanPhone}`,
+            hasAcceptedTerms: false,
         } as PlayerProfile;
     }
 };
@@ -150,7 +153,8 @@ export const subscribeToUser = (email: string, callback: (user: PlayerProfile) =
                 level: data.level ?? 0,
                 avatarUrl: data.avatarUrl || `https://i.pravatar.cc/150?u=${data.phone}`,
                 checkIns: data.checkIns ?? data.visits ?? 0,
-                visits: data.checkIns ?? data.visits ?? 0
+                visits: data.checkIns ?? data.visits ?? 0,
+                hasAcceptedTerms: data.hasAcceptedTerms ?? false,
             } as PlayerProfile);
         });
     });
@@ -174,6 +178,12 @@ export const updateUserStats = async (docId: string, newXp: number, newLevel: nu
 export const logoutFirebase = async () => {
     await signOut(auth);
 }; 
+
+// --- ACEPTAR TÉRMINOS Y CONDICIONES ---
+export const acceptTerms = async (docId: string): Promise<void> => {
+    const userRef = doc(db, USERS_COLLECTION, docId);
+    await updateDoc(userRef, { hasAcceptedTerms: true });
+};
 
 // --- RECUPERAR CONTRASEÑA INTELIGENTE ---
 export const resetPasswordWithIdentifier = async (identifier: string): Promise<void> => {

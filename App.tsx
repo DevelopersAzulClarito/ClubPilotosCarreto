@@ -25,6 +25,7 @@ import ProfileScreen from './components/screens/ProfileScreen';
 
 // 👇 NUEVO: Importamos el gancho de notificaciones Push (En segundo plano)
 import { usePushNotifications } from './components/usePushNotifications';
+import TermsGuardModal from './components/TermsGuardModal';
 
 
 const App: React.FC = () => {
@@ -185,15 +186,21 @@ const App: React.FC = () => {
             case AppState.PROFILING: return <ProfilingScreen onComplete={() => setAppState(AppState.DASHBOARD)} />;
             
             default: return (
-                <div className="flex flex-col flex-grow pb-20 relative z-0">
-                    {activeTab === 'home' && <Dashboard player={player!} setActiveTab={setActiveTab} error={null} />}
-                    {activeTab === 'store' && <StoreScreen />}
-                    {activeTab === 'qr' && <QRScreen player={player!} setActiveTab={setActiveTab} />}
-                    {activeTab === 'prizes' && <LevelsScreen player={player!} onPlayerUpdate={handlePlayerUpdate} />}
-                    {activeTab === 'profile' && <ProfileScreen player={player!} onLogout={handleLogout} onAvatarChange={() => {}} />}
-                    
-                    <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
-                </div>
+                <>
+                    {/* Terms Guard: bloquea el dashboard hasta que el usuario acepte */}
+                    {player && !player.hasAcceptedTerms && (
+                        <TermsGuardModal player={player} onDecline={handleLogout} />
+                    )}
+                    <div className="flex flex-col flex-grow pb-20 relative z-0">
+                        {activeTab === 'home' && <Dashboard player={player!} setActiveTab={setActiveTab} error={null} />}
+                        {activeTab === 'store' && <StoreScreen />}
+                        {activeTab === 'qr' && <QRScreen player={player!} setActiveTab={setActiveTab} />}
+                        {activeTab === 'prizes' && <LevelsScreen player={player!} onPlayerUpdate={handlePlayerUpdate} />}
+                        {activeTab === 'profile' && <ProfileScreen player={player!} onLogout={handleLogout} onAvatarChange={() => {}} />}
+
+                        <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+                    </div>
+                </>
             );
         }
     };

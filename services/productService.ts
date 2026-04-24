@@ -32,11 +32,13 @@ export const getActiveProducts = async (): Promise<Product[]> => {
             return {
                 id: doc.id,
                 name: data.name || 'Producto sin nombre',
-                price: parseFloat(data.price) || 0, // Aseguramos que sea número
+                price: parseFloat(data.price) || 0,
                 isActive: data.isActive,
                 department: data.department,
                 barcode: data.barcode,
-                imageUrl: data.imageUrl || randomImage // Usamos la de la BD si existe, si no, la de relleno
+                imageUrl: data.imageUrl || randomImage,
+                points: data.points ?? undefined,
+                stock: data.stock !== undefined ? Number(data.stock) : undefined,
             } as Product;
         });
 
